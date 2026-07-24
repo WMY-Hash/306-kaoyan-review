@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>306 考研复习 — 考点库 & 卡片系统</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#1e1e2e">
+  <meta name="description" content="306 临床医学综合能力（西医）本地优先复习系统：核心考点库 + 主动回忆卡片 + 进度看板 + 知识星图。">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="icons/icon-192.png" sizes="192x192" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-maskable-512.png">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -116,12 +122,23 @@
   <script src="data/kb.js"></script>
   <script src="data/plan.js"></script>
   <script src="data/graph.js"></script>
-  <!-- 知识星图（M6）：3D 力导向图，CDN 引入，纯前端无构建 -->
-  <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
-  <script src="https://unpkg.com/3d-force-graph@1.73.4/dist/3d-force-graph.min.js"></script>
-  <script src="https://unpkg.com/three-spritetext@1.10.0/dist/three-spritetext.min.js"></script>
+  <!-- 知识星图（M6）：3D 力导向图，已本地化至 vendor/ 以支持完全离线（PWA / 桌面软件） -->
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/3d-force-graph.min.js"></script>
   <!-- 应用逻辑 -->
   <script src="js/app.js"></script>
+  <!-- PWA：仅在 http(s) 下注册 service worker；file:// 双击打开不注册（仍可用） -->
+  <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      if (location.protocol !== 'http:' && location.protocol !== 'https:') return;
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (e) {
+          console.warn('[SW] register failed:', e);
+        });
+      });
+    })();
+  </script>
   <!-- 兜底：若外部脚本被拦截（如用不支持 JS 的预览器打开），给出正确打开方式 -->
   <script>
     window.addEventListener('load', function () {

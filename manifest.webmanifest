@@ -1,0 +1,40 @@
+{
+  "name": "306 考研复习辅助",
+  "short_name": "306 复习",
+  "description": "306 临床医学综合能力（西医）本地优先复习系统：核心考点库 + 主动回忆卡片 + 进度看板 + 知识星图。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "id": "/306-kaoyan-review/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "zh-CN",
+  "background_color": "#11111b",
+  "theme_color": "#1e1e2e",
+  "categories": ["education", "productivity", "medical"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "name": "306-kaoyan-review-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "306 考研复习辅助 — Electron 桌面壳（加载本地 index.html，纯前端零依赖）",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:dir": "electron-builder --win --dir"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.0"
+  },
+  "build": {
+    "appId": "com.wmy.306review",
+    "productName": "306 考研复习",
+    "copyright": "Copyright © 2026 王鸣远",
+    "directories": {
+      "output": "../release",
+      "buildResources": "../icons"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "..",
+        "to": "app",
+        "filter": [
+          "**/*",
+          "!**/node_modules/**",
+          "!**/electron/node_modules/**",
+          "!**/electron/**",
+          "!**/.git/**",
+          "!**/release/**",
+          "!**/kaoyan-review-dist.zip",
+          "!**/smoke_test.js",
+          "!**/star_label_test.js",
+          "!**/gen_*.py",
+          "!**/gen_*.js"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "../icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "306 考研复习"
+    },
+    "portable": {
+      "artifactName": "306-kaoyan-review-${version}-portable.exe"
+    }
+  }
+}
