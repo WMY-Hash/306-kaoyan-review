@@ -586,7 +586,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
   background: transparent; color: var(--text-muted);
   font-size: 1rem; border-radius: 8px; transition: var(--transition);
 }
-.btn-icon:hover { background: var(--bg-surface1); color: var(--text); }
+.btn-icon:hover { background: rgba(255,255,255,.10); color: var(--text); }
 .btn-primary {
   width: 100%;
   padding: 11px;
@@ -646,7 +646,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 #card-progress { font-size: .85rem; color: var(--text-subtle); font-weight: 600; }
 .card-progress-track {
   width: 100%; height: 5px;
-  background: var(--bg-surface0); border-radius: 999px; overflow: hidden;
+  background: rgba(255,255,255,.07); border-radius: 999px; overflow: hidden;
 }
 .card-progress-fill {
   height: 100%; width: 0%;
@@ -793,7 +793,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 /* 复习队列 */
 .queue-empty { text-align: center; padding: 28px; color: var(--text-muted); font-size: .92rem; }
 .queue-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-bottom: 4px; }
-.queue-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--bg-surface1); border-radius: var(--radius); cursor: pointer; transition: var(--transition); border: 1px solid transparent; }
+.queue-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: rgba(255,255,255,.05); border-radius: var(--radius); cursor: pointer; transition: var(--transition); border: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.06); }
 .queue-item:hover { border-color: var(--accent); transform: translateX(2px); }
 .queue-item .q-title { flex: 1; font-size: .9rem; font-weight: 500; }
 .queue-item .q-meta { font-size: .72rem; color: var(--text-muted); white-space: nowrap; }
@@ -913,7 +913,7 @@ a.res-item:hover {
 .plan-overall { text-align: right; flex-shrink: 0; }
 .plan-overall-num { font-size: 1.9rem; font-weight: 800; color: var(--green); line-height: 1; }
 .plan-overall-label { font-size: .76rem; color: var(--text-muted); margin-top: 4px; }
-.plan-overall-bar { height: 10px; border-radius: 999px; background: var(--bg-surface1); overflow: hidden; margin-bottom: 22px; }
+.plan-overall-bar { height: 10px; border-radius: 999px; background: rgba(255,255,255,.07); overflow: hidden; margin-bottom: 22px; }
 .plan-overall-fill { height: 100%; background: linear-gradient(90deg, var(--green), var(--teal)); border-radius: 999px; transition: width .3s ease; }
 
 .plan-week {
@@ -958,7 +958,7 @@ a.res-item:hover {
 .plan-task-meta { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
 .plan-task-pts { font-size: .7rem; padding: 2px 8px; border-radius: 999px; background: rgba(232,200,121,.18); color: #e8c879; font-weight: 700; flex-shrink: 0; }
 .plan-task-note { font-size: .76rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.plan-open { font-size: .76rem; color: var(--accent); background: var(--bg-surface2); border: 1px solid var(--bg-surface1); border-radius: 999px; padding: 4px 11px; cursor: pointer; flex-shrink: 0; transition: background .2s, transform .15s; }
+.plan-open { font-size: .76rem; color: #e8c879; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16); border-radius: 999px; padding: 4px 11px; cursor: pointer; flex-shrink: 0; transition: background .2s, transform .15s; }
 .plan-open:hover { background: var(--grad-accent); color: var(--bg-crust); transform: translateX(2px); }
 
 /* ===== 滚动条 ===== */
@@ -990,18 +990,18 @@ a.res-item:hover {
   font-size: .82rem;
   padding: 7px 14px;
   border-radius: 999px;
-  border: 1px solid rgba(203,166,247,.5);
-  background: linear-gradient(135deg, rgba(203,166,247,.18), rgba(137,180,250,.18));
-  color: var(--mauve);
+  border: 1px solid rgba(232,200,121,.5);
+  background: linear-gradient(135deg, rgba(232,200,121,.18), rgba(148,226,213,.18));
+  color: #e8c879;
   cursor: pointer;
   font-weight: 700;
   white-space: nowrap;
   transition: var(--transition);
   flex-shrink: 0;
 }
-.btn-star:hover { background: linear-gradient(135deg, rgba(203,166,247,.32), rgba(137,180,250,.32)); transform: translateY(-1px); }
+.btn-star:hover { background: linear-gradient(135deg, rgba(232,200,121,.32), rgba(148,226,213,.32)); transform: translateY(-1px); }
 .btn-star.active {
-  background: linear-gradient(135deg, var(--mauve), var(--accent));
+  background: linear-gradient(135deg, #e8c879, #94e2d5);
   color: #1e1e2e;
   box-shadow: 0 2px 12px rgba(203,166,247,.45);
 }
