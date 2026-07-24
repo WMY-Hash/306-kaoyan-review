@@ -1632,6 +1632,7 @@
       const other = raw.nodes.find(n => n.id === otherId);
       const arrow = isSrc ? '→' : '←';
       return `<li class="star-conn">
+        <button class="star-conn-edit" data-link="${escapeHtml(l.id)}" title="编辑此连线">✎</button>
         <span class="star-conn-type">${escapeHtml(l.type || '关联')}</span>
         <span class="star-conn-node">${arrow} ${escapeHtml(other ? other.name : otherId)}</span>
         <button class="star-conn-del" data-link="${escapeHtml(l.id)}" title="删除此连线">✕</button>
@@ -1664,6 +1665,11 @@
     document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
     info.querySelectorAll('.star-conn-del').forEach(btn =>
       btn.addEventListener('click', () => deleteLink(btn.dataset.link)));
+    info.querySelectorAll('.star-conn-edit').forEach(btn =>
+      btn.addEventListener('click', () => {
+        const link = conns.find(x => x.id === btn.dataset.link);
+        if (link) showLinkEditForm(link);
+      }));
     info.querySelectorAll('.star-ref-btn').forEach(btn =>
       btn.addEventListener('click', () => jumpToKbPoint(btn.dataset.ref)));
     document.getElementById('star-edit-node').addEventListener('click', () => showNodeEditForm(id));
@@ -1685,11 +1691,13 @@
       <h3 class="star-info-title">${escapeHtml(nodeNameOf(raw, sId))} → ${escapeHtml(nodeNameOf(raw, tId))}</h3>
       <div class="star-info-body"><p><b>关系：</b>${escapeHtml(l.type || '关联')}</p>${l.label ? '<p>' + escapeHtml(l.label) + '</p>' : ''}</div>
       <div class="star-info-actions">
+        <button class="btn-pill" id="star-edit-link">✎ 编辑</button>
         <button class="btn-wrong" id="star-del-link">🗑 删除连线</button>
       </div>
     `;
     info.classList.remove('hidden');
     document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('star-edit-link').addEventListener('click', () => showLinkEditForm(l));
     document.getElementById('star-del-link').addEventListener('click', () => deleteLink(l.id));
   }
 
@@ -1834,7 +1842,55 @@
     });
   }
 
-  // —— 删除 ——
+  function showLinkEditForm(l) {
+    const raw = getRawGraph();
+    const sId = (typeof l.source === 'object' && l.source) ? l.source.id : l.source;
+    const tId = (typeof l.target === 'object' && l.target) ? l.target.id : l.target;
+    const opts = raw.nodes.map(n =>
+      `<option value="${n.id}"${n.id === sId ? ' selected' : ''}>${escapeHtml(n.name)}</option>`).join('');
+    const info = document.getElementById('star-info');
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:#89b4fa">编辑连线</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <div class="star-form">
+        <label>起点（源）<select id="f-link-src">${opts}</select></label>
+        <label>终点（目标）<select id="f-link-tgt">${opts}</select></label>
+        <label>关系类型<input type="text" id="f-link-type" value="${escapeHtml(l.type || '')}" placeholder="如：病因 / 机制 / 先修"></label>
+        <label>说明（可选）<input type="text" id="f-link-label" value="${escapeHtml(l.label || '')}" placeholder="一句话描述关系"></label>
+      </div>
+      <div class="star-info-actions">
+        <button class="btn-known" id="f-link-save">✓ 保存</button>
+        <button class="btn-pill" id="f-link-cancel">取消</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('f-link-cancel').addEventListener('click', hideStarInfo);
+    document.getElementById('f-link-save').addEventListener('click', () => {
+      const source = document.getElementById('f-link-src').value;
+      const target = document.getElementById('f-link-tgt').value;
+      if (!source || !target) { alert('请选择两端节点'); return; }
+      if (source === target) { alert('起点和终点不能相同'); return; }
+      const type = document.getElementById('f-link-type').value.trim() || '关联';
+      const label = document.getElementById('f-link-label').value.trim();
+      const user = loadUserGraph();
+      if (l.id.indexOf('seed_l') === 0) {
+        // 种子连线不可改，先隐藏原连线再以用户连线覆盖（id 稳定便于再次编辑）
+        const idx = parseInt(l.id.slice('seed_l'.length), 10);
+        user.deletedLinks.push('seed_l' + idx);
+        user.links.push({ id: 'ul_seed_' + idx, source, target, type, label });
+      } else {
+        const li = user.links.findIndex(x => x.id === l.id);
+        if (li >= 0) user.links[li] = { id: l.id, source, target, type, label };
+        else user.links.push({ id: l.id, source, target, type, label });
+      }
+      saveUserGraph(user);
+      hideStarInfo();
+      refreshStar();
+    });
+  }
   function deleteNode(id) {
     const user = loadUserGraph();
     if (id.indexOf('u_') === 0) {

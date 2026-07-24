@@ -958,6 +958,8 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
 .star-conn-label { display: block; width: 100%; font-size: .72rem; color: var(--text-subtle); margin-top: 3px; line-height: 1.5; }
 .star-conn-del { flex-shrink: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: .82rem; padding: 2px 4px; border-radius: 6px; }
 .star-conn-del:hover { color: var(--red); background: rgba(243,139,168,.16); }
+.star-conn-edit { flex-shrink: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: .82rem; padding: 2px 4px; border-radius: 6px; }
+.star-conn-edit:hover { color: var(--accent); background: rgba(137,180,250,.16); }
 .star-conn-none { color: var(--text-muted); font-size: .78rem; padding: 4px 2px; }
 .star-info-actions { display: flex; gap: 8px; margin-top: 6px; }
 .star-info-actions .btn-pill, .star-info-actions .btn-known, .star-info-actions .btn-wrong {
