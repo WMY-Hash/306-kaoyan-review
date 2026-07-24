@@ -1528,15 +1528,18 @@
           starGraph
             .linkThreeObject(l => {
               const text = (l.type ? l.type + '：' : '') + (l.label || '');
-              const sp = new window.SpriteText(text.length > 20 ? text.slice(0, 20) + '…' : text);
+              const sp = new window.SpriteText(text.length > 22 ? text.slice(0, 22) + '…' : text);
               sp.__linkId = l.id;
               starLinkSprites[l.id] = sp;
-              sp.color = '#e8ecf4';
-              sp.backgroundColor = 'rgba(17,17,27,0.75)';
-              sp.padding = 0.5;
-              sp.borderRadius = 0.6;
-              sp.fontSize = 1.0;
-              sp.sizeAttenuation = true;
+              sp.color = '#e8ecf4';             // 浅色文字
+              sp.backgroundColor = false;        // 去掉白底框，避免覆盖节点
+              sp.padding = 0;
+              sp.borderRadius = 0;
+              sp.fontSize = 2.2;                 // 小字号
+              sp.fontWeight = 600;
+              sp.sizeAttenuation = false;        // 文字大小不随相机距离缩放
+              sp.strokeColor = 'rgba(13,17,23,.85)';  // 深色描边在暗色底上增加可读
+              sp.strokeWidth = 0.18;
               return sp;
             })
             .linkPositionUpdate((obj, coords) => {
