@@ -1,6 +1,6 @@
-# 306 考研复习系统 · UI 设计规范（v1 草案）
+# 306 考研复习系统 · UI 设计规范（v2 · 夜森林玻璃辉光）
 
-> 范围：**全局视觉重做**。风格方向：**玻璃拟态 / 现代 SaaS 暗色风**。
+> 范围：**全局视觉重做**。风格方向：**暗色玻璃辉光 × 夜森林融合（深炭绿底 + 暖金 hero 辉光 + 冷青/淡绿点缀）**。
 > 依据：现有代码为纯前端（`index.html` + `css/style.css` + `js/app.js`），无构建步骤；当前主题已是 Catppuccin Mocha 暗色、顶部栏带 `backdrop-filter` 毛玻璃雏形。本规范在其基础上把整套表面、组件、光感统一升级为玻璃拟态。
 > 状态：草案，待你确认方向后进入实现阶段（实现 = 替换 `:root` 变量 + 改写 `css/style.css` 各组件样式，必要时微调 `index.html` 结构与 `js/app.js` 渲染模板）。
 
@@ -18,7 +18,7 @@
 
 ## 2. 配色系统
 
-沿用 Catppuccin Mocha 的色相（已验证协调），新增"玻璃/辉光" token。
+夜森林方向（深炭绿底 + 暖金 hero 辉光），新增"玻璃/辉光" token。
 
 ### 2.1 语义色（与现有一致，仅作为引用）
 
@@ -44,26 +44,31 @@
 | `--glass-border` | `rgba(255,255,255,.12)` | 玻璃 1px 描边 |
 | `--glass-hi` | `inset 0 1px 0 rgba(255,255,255,.10)` | 玻璃顶部高光内阴影 |
 | `--on-glass` | `rgba(205,214,244,.92)` | 玻璃上的正文色（略提亮） |
-| `--glow-accent` | `0 8px 30px rgba(137,180,250,.35)` | accent 辉光 |
-| `--glow-warm` | `0 8px 30px rgba(250,179,135,.30)` | 暖色辉光 |
+| `--glow-gold` | `0 8px 30px rgba(232,200,121,.28)` | 暖金 hero 辉光 |
+| `--glow-warm` | `0 8px 30px rgba(240,169,160,.22)` | 暖色辉光 |
 
 ### 2.3 建议落地的 `:root`（实现时直接替换）
 
 ```css
 :root{
-  --bg-base:#16161f; --bg-crust:#0d0d14;
-  --bg-surface0:#262637; --bg-surface1:#33334a; --bg-surface2:#45475a;
-  --text:#cdd6f4; --text-subtle:#a6adc8; --text-muted:#7f849c;
-  --accent:#89b4fa; --accent2:#a6e3a1; --red:#f38ba8; --yellow:#f9e2af;
+  /* 夜森林基底（深炭绿 → 墨蓝） */
+  --bg-crust:#070b0a; --bg-base:#0c1311; --bg-mantle:#0f1816;
+  --bg-surface0:#16201d; --bg-surface1:#1d2a26; --bg-surface2:#283a34;
+  /* 文本（更亮、雾感） */
+  --text:#e8f0ec; --text-subtle:#b9c8c2; --text-muted:#7e918b;
+  /* 学科 6 色编码（保留语义，微调更通透） */
+  --blue:#8fb8f0; --green:#a6e3a1; --red:#f38ba8; --yellow:#f9e2af;
   --peach:#fab387; --mauve:#cba6f7; --teal:#94e2d5; --sky:#89dceb;
+  /* hero 辉光：暖金（与冷青/淡绿点缀并存） */
+  --gold:#e8c879; --gold-hi:#fff0c8; --accent:#e8c879; --accent2:#a6e3a1;
 
   --glass:rgba(255,255,255,.055);
   --glass-strong:rgba(255,255,255,.09);
-  --glass-border:rgba(255,255,255,.12);
+  --glass-border:rgba(255,255,255,.13);
   --glass-hi:inset 0 1px 0 rgba(255,255,255,.10);
-  --on-glass:rgba(205,214,244,.92);
-  --glow-accent:0 8px 30px rgba(137,180,250,.35);
-  --glow-warm:0 8px 30px rgba(250,179,135,.30);
+  --on-glass:rgba(232,240,236,.92);
+  --glow-gold:0 8px 30px rgba(232,200,121,.28);
+  --glow-warm:0 8px 30px rgba(240,169,160,.22);
 
   --sidebar-w:268px; --detail-w:400px; --topbar-h:60px;
   --radius:14px; --radius-lg:22px; --radius-pill:999px;
@@ -71,8 +76,8 @@
   --shadow-sm:0 2px 10px rgba(0,0,0,.30);
   --shadow-md:0 10px 30px rgba(0,0,0,.40);
   --shadow-lg:0 24px 60px rgba(0,0,0,.55);
-  --grad-accent:linear-gradient(135deg,#89b4fa 0%,#cba6f7 100%);
-  --grad-warm:linear-gradient(135deg,#fab387 0%,#f38ba8 100%);
+  --grad-accent:linear-gradient(135deg,#e8c879 0%,#fff0c8 100%);
+  --grad-warm:linear-gradient(135deg,#f0a9a0 0%,#f38ba8 100%);
   --grad-cool:linear-gradient(135deg,#94e2d5 0%,#89b4fa 100%);
 }
 ```
@@ -82,10 +87,10 @@
 ```css
 body{
   background:
-    radial-gradient(1100px 700px at 82% -8%, rgba(137,180,250,.16), transparent 60%),
-    radial-gradient(900px 600px at -6% 108%, rgba(203,166,247,.14), transparent 55%),
-    radial-gradient(700px 500px at 50% 50%, rgba(148,226,213,.05), transparent 60%),
-    var(--bg-crust);
+    radial-gradient(1200px 760px at 82% -12%, rgba(232,200,121,.12), transparent 60%),
+    radial-gradient(1000px 680px at 10% 112%, rgba(148,226,213,.09), transparent 58%),
+    radial-gradient(900px 600px at 50% 46%, rgba(168,230,160,.05), transparent 60%),
+    linear-gradient(160deg, #0c1311 0%, #0a1216 55%, #070b0a 100%);
 }
 ```
 

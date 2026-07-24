@@ -1,37 +1,61 @@
 /* ===== 306 考点库 · Catppuccin Mocha 暗色主题（精致版） ===== */
 :root {
-  --bg-base: #1e1e2e;
-  --bg-mantle: #181825;
-  --bg-crust: #11111b;
-  --bg-surface0: #313244;
-  --bg-surface1: #45475a;
-  --bg-surface2: #585b70;
-  --text: #cdd6f4;
-  --text-subtle: #a6adc8;
-  --text-muted: #6c7086;
-  --accent: #89b4fa;
-  --accent2: #a6e3a1;
+  /* 夜森林基底（深炭绿 → 墨蓝） */
+  --bg-crust: #070b0a;
+  --bg-base: #0c1311;
+  --bg-mantle: #0f1816;
+  --bg-surface0: #16201d;
+  --bg-surface1: #1d2a26;
+  --bg-surface2: #283a34;
+
+  /* 文本（更亮、雾感） */
+  --text: #e8f0ec;
+  --text-subtle: #b9c8c2;
+  --text-muted: #7e918b;
+
+  /* 学科 6 色编码（保留语义，微调更通透） */
+  --blue: #8fb8f0;
+  --green: #a6e3a1;
   --red: #f38ba8;
   --yellow: #f9e2af;
-  --green: #a6e3a1;
   --peach: #fab387;
   --mauve: #cba6f7;
   --teal: #94e2d5;
   --sky: #89dceb;
 
-  --sidebar-w: 264px;
-  --detail-w: 400px;
-  --topbar-h: 58px;
-  --search-h: 48px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --transition: 0.22s cubic-bezier(.4,0,.2,1);
+  /* hero 辉光：暖金（与冷青/淡绿点缀并存） */
+  --gold: #e8c879;
+  --gold-hi: #fff0c8;
+  --accent: #e8c879;
+  --accent2: #a6e3a1;
 
-  --shadow-sm: 0 2px 8px rgba(0,0,0,.28);
-  --shadow-md: 0 6px 20px rgba(0,0,0,.35);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,.45);
-  --grad-accent: linear-gradient(135deg, #89b4fa 0%, #cba6f7 100%);
-  --grad-warm: linear-gradient(135deg, #fab387 0%, #f38ba8 100%);
+  /* 玻璃 token（更透、更暖、blur 更足） */
+  --glass: rgba(255,255,255,.055);
+  --glass-strong: rgba(255,255,255,.09);
+  --glass-border: rgba(255,255,255,.13);
+  --glass-hi: inset 0 1px 0 rgba(255,255,255,.10);
+  --on-glass: rgba(232,240,236,.92);
+  --glow-gold: 0 8px 30px rgba(232,200,121,.28);
+  --glow-warm: 0 8px 30px rgba(240,169,160,.22);
+
+  /* 尺寸 / 圆角（更柔） */
+  --sidebar-w: 268px;
+  --detail-w: 400px;
+  --topbar-h: 60px;
+  --search-h: 50px;
+  --radius: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+  --transition: .24s cubic-bezier(.4,0,.2,1);
+
+  /* 阴影 */
+  --shadow-sm: 0 2px 10px rgba(0,0,0,.30);
+  --shadow-md: 0 10px 30px rgba(0,0,0,.40);
+  --shadow-lg: 0 24px 60px rgba(0,0,0,.55);
+
+  /* 渐变（hero 暖金 + 冷青/暖调点缀） */
+  --grad-accent: linear-gradient(135deg, #e8c879 0%, #fff0c8 100%);
+  --grad-warm: linear-gradient(135deg, #f0a9a0 0%, #f38ba8 100%);
   --grad-cool: linear-gradient(135deg, #94e2d5 0%, #89b4fa 100%);
 }
 
@@ -42,9 +66,10 @@ html, body { height: 100%; }
 body {
   font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(1200px 600px at 85% -10%, rgba(137,180,250,.10), transparent 60%),
-    radial-gradient(1000px 500px at -5% 110%, rgba(203,166,247,.10), transparent 55%),
-    var(--bg-base);
+    radial-gradient(1200px 760px at 82% -12%, rgba(232,200,121,.12), transparent 60%),
+    radial-gradient(1000px 680px at 10% 112%, rgba(148,226,213,.09), transparent 58%),
+    radial-gradient(900px 600px at 50% 46%, rgba(168,230,160,.05), transparent 60%),
+    linear-gradient(160deg, #0c1311 0%, #0a1216 55%, #070b0a 100%);
   color: var(--text);
   line-height: 1.65;
   overflow: hidden;
@@ -999,4 +1024,107 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
   .star-info { width: auto; left: 14px; right: 14px; }
   .star-hint { display: none; }
   .star-toolbar { max-width: 90%; }
+}
+
+/* =========================================================
+   Night Forest Glass Theme (v2) — 夜森林玻璃辉光基础层
+   叠加在上方默认样式之上；仅换皮，不改结构与行为。
+   ========================================================= */
+.glass {
+  background: var(--glass);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md), var(--glass-hi);
+  color: var(--on-glass);
+}
+.glass-strong {
+  background: var(--glass-strong);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  box-shadow: var(--shadow-lg), var(--glass-hi);
+}
+
+/* 顶部栏：玻璃横条 + 底部细光边 */
+#top-bar {
+  background: rgba(12,19,17,.72);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border-bottom: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-sm), var(--glass-hi);
+}
+
+/* 品牌 logo 暖金辉光 + 品牌名渐变 */
+.brand-logo {
+  background: var(--grad-gold);
+  box-shadow: var(--glow-gold), var(--shadow-sm);
+}
+.brand-name {
+  background: linear-gradient(135deg, #e8f0ec, var(--gold));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* 统计卡：玻璃芯片 */
+.stat-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--shadow-sm), var(--glass-hi);
+}
+
+/* 左侧科目导航：玻璃侧栏 + 右缘光边 */
+#sidebar {
+  background: rgba(12,19,17,.66);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border-right: 1px solid var(--glass-border);
+}
+
+/* 详情面板：玻璃浮层 + 左缘光边 + 顶部高光 */
+#detail-panel {
+  background: rgba(15,24,22,.80);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg), var(--glass-hi);
+}
+
+/* 卡片复习弹窗：大圆角玻璃 */
+.modal-content {
+  background: var(--glass-strong);
+  backdrop-filter: blur(30px) saturate(160%);
+  -webkit-backdrop-filter: blur(30px) saturate(160%);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), var(--glass-hi);
+}
+.card-front, .card-back {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+}
+
+/* 看板 KPI 卡：玻璃 */
+.kpi-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: var(--shadow-sm), var(--glass-hi);
+}
+
+/* 知识星图信息面板：玻璃浮层 */
+.star-info {
+  background: rgba(15,24,22,.82);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-lg), var(--glass-hi);
+}
+
+/* 搜索框聚焦：暖金边 + 微辉光（hero 光感） */
+#search-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(232,200,121,.18);
 }
