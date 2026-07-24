@@ -1097,7 +1097,7 @@ a.res-item:hover {
 .star-ref-btn:hover { background: rgba(166,227,161,.3); }
 .star-info-section-title { margin: 14px 0 7px; font-size: .76rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 .star-conns { list-style: none; padding: 0; margin: 0 0 12px; }
-.star-conn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--bg-surface0); margin-bottom: 5px; font-size: .8rem; }
+.star-conn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,.05); margin-bottom: 5px; font-size: .8rem; }
 .star-conn-type { flex-shrink: 0; font-size: .68rem; color: #e8c879; background: rgba(232,200,121,.16); padding: 2px 7px; border-radius: 999px; }
 .star-conn-node { flex: 1; color: var(--text); }
 .star-conn-label { display: block; width: 100%; font-size: .72rem; color: var(--text-subtle); margin-top: 3px; line-height: 1.5; }
