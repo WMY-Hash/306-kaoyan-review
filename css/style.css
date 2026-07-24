@@ -67,6 +67,30 @@ html, body { height: 100%; }
 body {
   font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
+    /* ===== 萤火虫光点（radial-gradient 圆斑，与背景同渲染引擎，100%可靠） ===== */
+    /* 左上区域 */
+    radial-gradient(circle 8px at 80px 110px, rgba(232,200,121,.60), rgba(232,200,121,.20) 4px, transparent 8px),
+    radial-gradient(circle 6px at 155px 200px, rgba(148,226,213,.50), rgba(148,226,213,.18) 3px, transparent 6px),
+    radial-gradient(circle 9px at 220px 150px, rgba(232,200,121,.48), rgba(232,200,121,.16) 5px, transparent 9px),
+    radial-gradient(circle 6px at 95px 280px, rgba(168,230,160,.46), rgba(168,230,160,.16) 3px, transparent 6px),
+    /* 中左 */
+    radial-gradient(circle 7px at 60px 420px, rgba(148,226,213,.42), rgba(148,226,213,.14) 3.5px, transparent 7px),
+    radial-gradient(circle 8px at 180px 500px, rgba(232,200,121,.52), rgba(232,200,121,.18) 4px, transparent 8px),
+    radial-gradient(circle 6px at 250px 580px, rgba(168,230,160,.40), rgba(168,230,160,.14) 3px, transparent 6px),
+    /* 右侧 */
+    radial-gradient(circle 8px at 1120px 170px, rgba(148,226,213,.50), rgba(148,226,213,.18) 4px, transparent 8px),
+    radial-gradient(circle 7px at 1060px 260px, rgba(232,200,121,.42), rgba(232,200,121,.14) 3.5px, transparent 7px),
+    radial-gradient(circle 9px at 1180px 380px, rgba(168,230,160,.46), rgba(168,230,160,.16) 5px, transparent 9px),
+    radial-gradient(circle 6px at 1090px 480px, rgba(232,200,121,.38), rgba(232,200,121,.12) 3px, transparent 6px),
+    /* 底部 */
+    radial-gradient(circle 7px at 130px calc(100vh - 180px), rgba(168,230,160,.44), rgba(168,230,160,.15) 3.5px, transparent 7px),
+    radial-gradient(circle 8px at 240px calc(100vh - 120px), rgba(232,200,121,.50), rgba(232,200,121,.17) 4px, transparent 8px),
+    /* ===== 氛围辉光区 ===== */
+    radial-gradient(ellipse 340px 260px at 6% 94%, rgba(168,230,160,.24), transparent 62%),
+    radial-gradient(ellipse 220px 170px at 10% 90%, rgba(148,226,213,.18), transparent 56%),
+    radial-gradient(ellipse 200px 150px at 94% 6%, rgba(232,200,121,.18), transparent 52%),
+    radial-gradient(ellipse 280px 200px at 3% 3%, rgba(232,200,121,.14), transparent 56%),
+    /* ===== 原有 hero 光晕（保留） ===== */
     radial-gradient(1320px 820px at 80% -14%, rgba(232,200,121,.16), transparent 58%),
     radial-gradient(1060px 720px at 8% 114%, rgba(148,226,213,.12), transparent 56%),
     radial-gradient(960px 640px at 52% 48%, rgba(168,230,160,.06), transparent 60%),
@@ -80,58 +104,15 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ===== 夜森林装饰层（萤火虫光点 + 氛围辉光） ===== */
-/* 用多层 box-shadow 模拟散布光点；不用 calc()（box-shadow 不支持 vw） */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 0;
-  /* 萤火虫：offset-x offset-y blur-radius spread-radius color */
-  /* 左上区域 */
-  box-shadow:
-    80px 100px 6px 4px rgba(232,200,121,.55),
-    150px 190px 5px 3px rgba(148,226,213,.45),
-    210px 140px 7px 4px rgba(232,200,121,.40),
-    90px 260px 5px 3px rgba(168,230,160,.42),
-    /* 中左 */
-    55px 400px 6px 4px rgba(148,226,213,.38),
-    170px 480px 5px 3.5px rgba(232,200,121,.48),
-    240px 550px 6px 4px rgba(168,230,160,.36),
-    /* 中右（用固定大坐标适配常见宽屏） */
-    1100px 150px 7px 4px rgba(148,226,213,.46),
-    1050px 240px 5px 3px rgba(232,200,121,.38),
-    1150px 350px 6px 4px rgba(168,230,160,.42),
-    1080px 450px 5px 3.5px rgba(232,200,121,.32),
-    /* 底部 */
-    120px calc(100vh - 200px) 6px 4px rgba(168,230,160,.40),
-    220px calc(100vh - 140px) 5px 3.5px rgba(232,200,121,.45);
-  animation: fireflies 6s ease-in-out infinite alternate;
+/* 萤火虫呼吸动画 — 用 body 本身做（background 已包含光点） */
+@keyframes firefliesGlow {
+  0% { filter: brightness(0.95); }
+  100% { filter: brightness(1.08); }
 }
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  /* 底部左角发光植物辉光区域 — 提亮到可见级别 */
-  background:
-    radial-gradient(ellipse 320px 240px at 6% 94%, rgba(168,230,160,.22), transparent 60%),
-    radial-gradient(ellipse 200px 160px at 10% 90%, rgba(148,226,213,.16), transparent 55%),
-    /* 右上蝴蝶微辉光 */
-    radial-gradient(ellipse 180px 130px at 92% 6%, rgba(232,200,121,.16), transparent 50%),
-    /* 左上角暖金雾 */
-    radial-gradient(ellipse 260px 180px at 4% 4%, rgba(232,200,121,.12), transparent 55%);
-}
-@keyframes fireflies {
-  0% { opacity: .70; transform: scale(0.97); }
-  100% { opacity: 1; transform: scale(1.03); }
-}
+body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
 
-/* 确保内容层在装饰之上 */
-#app-container, #top-bar, #search-bar { position: relative; z-index: 1; }
+/* 删除旧的不可靠装饰层 */
+/* （body::before / body::after 已移除，萤火虫合并到 body background） */
 
 /* ===== 顶部栏 ===== */
 #top-bar {
@@ -1309,37 +1290,37 @@ a.res-item:hover {
   -webkit-text-fill-color: transparent;
 }
 
-/* 统计卡：独立玻璃小卡片（设计稿对齐） */
+/* 统计卡：独立玻璃小卡片（设计稿对齐 — 强对比） */
 .stat-card {
   background:
-    linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(18px) saturate(155%);
-  -webkit-backdrop-filter: blur(18px) saturate(155%);
+    linear-gradient(160deg, rgba(255,255,255,.13) 0%, rgba(255,255,255,.05) 100%);
+  border: 1px solid rgba(255,255,255,.26);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
   box-shadow:
-    0 4px 16px rgba(0,0,0,.22),
-    inset 0 1px 0 rgba(255,255,255,.16),
-    inset 0 -8px 20px rgba(0,0,0,.10);
+    0 4px 20px rgba(0,0,0,.25),
+    inset 0 1px 0 rgba(255,255,255,.20),
+    0 0 12px rgba(232,200,121,.10);
   transition: all .26s cubic-bezier(.22,1,.36,1);
 }
 .stat-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(232,200,121,.50);
+  border-color: rgba(232,200,121,.58);
   background:
-    linear-gradient(160deg, rgba(232,200,121,.12) 0%, rgba(255,255,255,.06) 100%);
+    linear-gradient(160deg, rgba(232,200,121,.16) 0%, rgba(255,255,255,.08) 100%);
   box-shadow:
-    0 8px 28px rgba(0,0,0,.30),
-    0 0 20px rgba(232,200,121,.18),
-    inset 0 1px 0 rgba(255,255,255,.24);
+    0 8px 32px rgba(0,0,0,.35),
+    0 0 24px rgba(232,200,121,.22),
+    inset 0 1px 0 rgba(255,255,255,.28);
 }
 
-/* 左侧科目导航：玻璃侧栏 — 更通透（设计稿对齐） */
+/* 左侧科目导航：玻璃侧栏 — 高度通透（设计稿对齐） */
 #sidebar {
-  background: rgba(12,19,17,.40);
-  backdrop-filter: blur(24px) saturate(165%);
-  -webkit-backdrop-filter: blur(24px) saturate(165%);
-  border-right: 1px solid rgba(255,255,255,.12);
-  box-shadow: 4px 0 28px rgba(0,0,0,.20), inset 1px 0 0 rgba(255,255,255,.08);
+  background: rgba(12,19,17,.28);
+  backdrop-filter: blur(28px) saturate(170%);
+  -webkit-backdrop-filter: blur(28px) saturate(170%);
+  border-right: 1px solid rgba(255,255,255,.10);
+  box-shadow: 4px 0 32px rgba(0,0,0,.15), inset 1px 0 0 rgba(255,255,255,.08);
 }
 
 /* 详情面板：玻璃浮层 — 更通透（设计稿对齐） */
