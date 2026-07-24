@@ -81,34 +81,34 @@ body {
 }
 
 /* ===== 夜森林装饰层（萤火虫光点 + 氛围辉光） ===== */
+/* 用多层 box-shadow 模拟散布光点；不用 calc()（box-shadow 不支持 vw） */
 body::before {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  /* 萤火虫散布光点 — 暖金 / 青绿 / 淡金 三色 */
+  border-radius: 0;
+  /* 萤火虫：offset-x offset-y blur-radius spread-radius color */
+  /* 左上区域 */
   box-shadow:
-    /* 左上区域 */
-    72px 95px 0 2px rgba(232,200,121,.40),
-    140px 180px 0 1.5px rgba(148,226,213,.32),
-    195px 130px 0 2.5px rgba(232,200,121,.28),
-    85px 240px 0 1.5px rgba(168,230,160,.30),
-    /* 中左区域 */
-    48px 380px 0 2px rgba(148,226,213,.26),
-    160px 450px 0 1.5px rgba(232,200,121,.35),
-    220px 520px 0 2px rgba(168,230,160,.24),
-    /* 右侧区域 */
-    calc(100vw - 90px) 140px 0 2.5px rgba(148,226,213,.34),
-    calc(100vw - 150px) 220px 0 1.5px rgba(232,200,121,.28),
-    calc(100vw - 70px) 320px 0 2px rgba(168,230,160,.30),
-    calc(100vw - 120px) 420px 0 1.5px rgba(232,200,121,.22),
-    /* 底部区域 */
-    110px calc(100vh - 180px) 0 2px rgba(168,230,160,.28),
-    200px calc(100vh - 120px) 0 1.5px rgba(232,200,121,.32),
-    calc(100vw - 180px) calc(100vh - 160px) 0 2.5px rgba(148,226,213,.30),
-    calc(100vw - 80px) calc(100vh - 90px) 0 2px rgba(232,200,121,.26);
-  animation: fireflies 7s ease-in-out infinite alternate;
+    80px 100px 6px 4px rgba(232,200,121,.55),
+    150px 190px 5px 3px rgba(148,226,213,.45),
+    210px 140px 7px 4px rgba(232,200,121,.40),
+    90px 260px 5px 3px rgba(168,230,160,.42),
+    /* 中左 */
+    55px 400px 6px 4px rgba(148,226,213,.38),
+    170px 480px 5px 3.5px rgba(232,200,121,.48),
+    240px 550px 6px 4px rgba(168,230,160,.36),
+    /* 中右（用固定大坐标适配常见宽屏） */
+    1100px 150px 7px 4px rgba(148,226,213,.46),
+    1050px 240px 5px 3px rgba(232,200,121,.38),
+    1150px 350px 6px 4px rgba(168,230,160,.42),
+    1080px 450px 5px 3.5px rgba(232,200,121,.32),
+    /* 底部 */
+    120px calc(100vh - 200px) 6px 4px rgba(168,230,160,.40),
+    220px calc(100vh - 140px) 5px 3.5px rgba(232,200,121,.45);
+  animation: fireflies 6s ease-in-out infinite alternate;
 }
 body::after {
   content: '';
@@ -116,16 +116,18 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  /* 底部左角发光植物辉光区域 */
+  /* 底部左角发光植物辉光区域 — 提亮到可见级别 */
   background:
-    radial-gradient(ellipse 280px 200px at 8% 92%, rgba(168,230,160,.14), transparent 60%),
-    radial-gradient(ellipse 160px 120px at 12% 88%, rgba(148,226,213,.10), transparent 55%),
+    radial-gradient(ellipse 320px 240px at 6% 94%, rgba(168,230,160,.22), transparent 60%),
+    radial-gradient(ellipse 200px 160px at 10% 90%, rgba(148,226,213,.16), transparent 55%),
     /* 右上蝴蝶微辉光 */
-    radial-gradient(ellipse 120px 90px at 94% 8%, rgba(232,200,121,.10), transparent 50%);
+    radial-gradient(ellipse 180px 130px at 92% 6%, rgba(232,200,121,.16), transparent 50%),
+    /* 左上角暖金雾 */
+    radial-gradient(ellipse 260px 180px at 4% 4%, rgba(232,200,121,.12), transparent 55%);
 }
 @keyframes fireflies {
-  0% { opacity: .65; filter: blur(0.5px); }
-  100% { opacity: 1; filter: blur(1px); }
+  0% { opacity: .70; transform: scale(0.97); }
+  100% { opacity: 1; transform: scale(1.03); }
 }
 
 /* 确保内容层在装饰之上 */
