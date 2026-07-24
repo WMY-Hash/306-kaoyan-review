@@ -17,6 +17,9 @@
   let isDashboardMode = false;
   let isResourcesMode = false;
   let isPlanMode = false;
+  let isStarMode = false;
+  let starGraph = null;            // ForceGraph3D 实例
+  let starHighlight = new Set();   // 搜索高亮的节点 id
   let reviewSource = 'point'; // 'point' | 'wrong' | 'queue'
 
   // ===== 致命错误可视化（避免静默白屏）=====
@@ -81,6 +84,7 @@
     document.getElementById('btn-dashboard').addEventListener('click', renderDashboard);
     document.getElementById('btn-resources').addEventListener('click', renderResourcesView);
     document.getElementById('btn-plan').addEventListener('click', renderPlanView);
+    document.getElementById('btn-star').addEventListener('click', toggleStarGraph);
     document.getElementById('btn-forgot').addEventListener('click', () => markCard(false));
     document.getElementById('btn-knew').addEventListener('click', () => markCard(true));
     document.getElementById('card-container').addEventListener('click', flipCard);
@@ -393,6 +397,12 @@
     exitDashboard();
     exitResources();
     exitPlan();
+    // 星图模式下，搜索框用于在星图中定位/高亮节点
+    if (isStarMode) {
+      const q = document.getElementById('search-input').value.trim().toLowerCase();
+      starSearch(q);
+      return;
+    }
     const query = document.getElementById('search-input').value.trim().toLowerCase();
     if (!query) {
       isSearchMode = false;
@@ -1311,6 +1321,562 @@
         openChapter(btn.dataset.subject, btn.dataset.chapter);
       });
     });
+  }
+
+  // ===== M6：知识星图（网状知识点 + 页内自由编辑）=====
+
+  // 6 科配色（Catppuccin 暗色系，与主题协调）
+  const GROUP_COLORS = {
+    physio:   '#89b4fa', // 蓝
+    biochem:  '#a6e3a1', // 绿
+    pathol:   '#f38ba8', // 红
+    internal: '#fab387', // 橙
+    surgery:  '#f9e2af', // 黄
+    humanity: '#cba6f7'  // 紫
+  };
+  const GROUP_NAMES = {
+    physio: '生理学', biochem: '生物化学', pathol: '病理学',
+    internal: '内科学', surgery: '外科学', humanity: '人文医学'
+  };
+  const GROUP_IDS = ['physio', 'biochem', 'pathol', 'internal', 'surgery', 'humanity'];
+
+  // 读取用户编辑覆盖层（localStorage，key=kg_user）
+  function loadUserGraph() {
+    try {
+      const r = safeStore.get('kg_user');
+      if (!r) return { nodes: [], links: [], deletedNodes: [], deletedLinks: [] };
+      const o = JSON.parse(r);
+      return {
+        nodes: Array.isArray(o.nodes) ? o.nodes : [],
+        links: Array.isArray(o.links) ? o.links : [],
+        deletedNodes: Array.isArray(o.deletedNodes) ? o.deletedNodes : [],
+        deletedLinks: Array.isArray(o.deletedLinks) ? o.deletedLinks : []
+      };
+    } catch (e) {
+      return { nodes: [], links: [], deletedNodes: [], deletedLinks: [] };
+    }
+  }
+  function saveUserGraph(o) {
+    safeStore.set('kg_user', JSON.stringify(o));
+  }
+
+  // 合并种子库 + 用户覆盖，得到当前工作图；同时给每条 link 赋稳定 id
+  function getRawGraph() {
+    const seed = (window.KB_GRAPH && window.KB_GRAPH.nodes) ? window.KB_GRAPH : { nodes: [], links: [] };
+    const user = loadUserGraph();
+    const deletedNodes = new Set(user.deletedNodes);
+    const deletedLinks = new Set(user.deletedLinks);
+
+    const nodeMap = {};
+    seed.nodes.forEach(n => { if (!deletedNodes.has(n.id)) nodeMap[n.id] = Object.assign({}, n); });
+    user.nodes.forEach(n => { nodeMap[n.id] = Object.assign({}, n); }); // 用户覆盖/新增
+    const nodes = Object.values(nodeMap);
+
+    const links = [];
+    seed.links.forEach((l, i) => {
+      const id = 'seed_l' + i;
+      if (deletedLinks.has(id) || deletedNodes.has(l.source) || deletedNodes.has(l.target)) return;
+      links.push(Object.assign({}, l, { id: id }));
+    });
+    user.links.forEach(l => {
+      if (deletedLinks.has(l.id) || deletedNodes.has(l.source) || deletedNodes.has(l.target)) return;
+      links.push(Object.assign({}, l));
+    });
+
+    // 计算度数（用于节点大小与连接展示）
+    const deg = {};
+    links.forEach(l => { deg[l.source] = (deg[l.source] || 0) + 1; deg[l.target] = (deg[l.target] || 0) + 1; });
+    nodes.forEach(n => { n.deg = deg[n.id] || 0; });
+    return { nodes, links };
+  }
+
+  // 深拷贝，供 3d-force-graph 摄取（库会改动传入对象）
+  function cloneGraph(raw) {
+    return {
+      nodes: raw.nodes.map(n => Object.assign({}, n)),
+      links: raw.links.map(l => ({ source: l.source, target: l.target, type: l.type, label: l.label, id: l.id }))
+    };
+  }
+
+  // 节点着色：搜索高亮时，命中亮、其余暗
+  function starNodeColor(n) {
+    if (starHighlight.size && !starHighlight.has(n.id)) return '#3a3f4b';
+    return GROUP_COLORS[n.group] || '#89b4fa';
+  }
+  function starLinkColor(l) {
+    if (starHighlight.size) {
+      const s = (typeof l.source === 'object' ? l.source.id : l.source);
+      const t = (typeof l.target === 'object' ? l.target.id : l.target);
+      if (starHighlight.has(s) && starHighlight.has(t)) return 'rgba(166,227,161,.9)';
+      return 'rgba(120,126,140,.25)';
+    }
+    return 'rgba(137,180,250,.35)';
+  }
+
+  function toggleStarGraph() {
+    if (isStarMode) exitStar();
+    else renderStarGraph();
+  }
+
+  function renderStarGraph() {
+    if (!window.KB_GRAPH) {
+      document.getElementById('content-area').innerHTML =
+        '<div class="no-results">知识星图数据未加载（data/graph.js 缺失）。</div>';
+      return;
+    }
+    isStarMode = true;
+    isSearchMode = false; isWrongBookMode = false;
+    exitDashboard(); exitResources(); exitPlan();
+    const b = document.getElementById('btn-star');
+    if (b) b.classList.add('active');
+    document.getElementById('btn-dashboard').classList.remove('active');
+    document.getElementById('btn-resources').classList.remove('active');
+    document.getElementById('btn-plan').classList.remove('active');
+    document.getElementById('btn-wrong-book').textContent = '📕 错题本';
+    document.getElementById('search-input').value = '';
+    closeDetail();
+    document.getElementById('app-container').classList.add('star-active');
+
+    const bc = document.getElementById('breadcrumb');
+    bc.innerHTML = '<span>🌌 知识星图</span>';
+
+    const legend = GROUP_IDS.map(g =>
+      `<span class="star-legend-item"><i style="background:${GROUP_COLORS[g]}"></i>${GROUP_NAMES[g]}</span>`
+    ).join('');
+
+    const area = document.getElementById('content-area');
+    area.innerHTML = `
+      <div id="star-graph"></div>
+      <div class="star-toolbar">
+        <button id="star-add-node" class="btn-pill" title="新增知识点">＋ 节点</button>
+        <button id="star-add-link" class="btn-pill" title="连接两个知识点">＋ 连线</button>
+        <button id="star-export" class="btn-pill" title="导出我的编辑">⬇ 导出</button>
+        <button id="star-import" class="btn-pill" title="导入备份">⬆ 导入</button>
+        <button id="star-reset-view" class="btn-pill" title="复位视角">⟳ 视角</button>
+        <input type="file" id="star-import-file" accept=".json" style="display:none">
+      </div>
+      <div class="star-legend">${legend}</div>
+      <div class="star-hint">拖拽旋转 · 滚轮缩放 · 点击节点查看/编辑 · 顶部搜索框可定位节点</div>
+      <div class="star-info hidden" id="star-info"></div>
+    `;
+
+    document.getElementById('star-add-node').addEventListener('click', showAddNodeForm);
+    document.getElementById('star-add-link').addEventListener('click', showAddLinkForm);
+    document.getElementById('star-export').addEventListener('click', exportStar);
+    document.getElementById('star-import').addEventListener('click', () => document.getElementById('star-import-file').click());
+    document.getElementById('star-import-file').addEventListener('change', importStar);
+    document.getElementById('star-reset-view').addEventListener('click', () => { if (starGraph) starGraph.zoomToFit(600, 40); });
+
+    bindStarResize();
+
+    const raw = getRawGraph();
+    if (typeof window.ForceGraph3D === 'function') {
+      const mount = document.getElementById('star-graph');
+      const w = area.clientWidth || window.innerWidth;
+      const h = area.clientHeight || window.innerHeight;
+      starGraph = window.ForceGraph3D()(mount)
+        .width(w).height(h)
+        .backgroundColor('#0d1117')
+        .graphData(cloneGraph(raw))
+        .nodeId('id')
+        .nodeVal(n => 2 + (n.deg || 0) * 0.6)
+        .nodeColor(starNodeColor)
+        .nodeOpacity(0.95)
+        .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
+        .nodeThreeObjectExtend(false)
+        .linkColor(starLinkColor)
+        .linkWidth(0.6)
+        .linkOpacity(0.5)
+        .linkDirectionalArrowLength(2.2)
+        .linkDirectionalArrowRelPos(1)
+        .linkLabel(l => {
+          const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
+          return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
+        })
+        .onNodeClick(n => { starHighlight.clear(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
+        .onLinkClick(l => { showLinkInfo(l); });
+      // 引擎稳定后自动适配视角
+      starGraph.onEngineStop(() => starGraph.zoomToFit(500, 50));
+    } else {
+      // CDN 未加载（离线/被拦截）：降级为可编辑的列表视图
+      renderStarFallback(raw);
+    }
+  }
+
+  function nodeNameOf(raw, ref) {
+    const id = (typeof ref === 'object' && ref) ? ref.id : ref;
+    const n = raw.nodes.find(x => x.id === id);
+    return n ? n.name : String(id);
+  }
+
+  function focusNode(node) {
+    if (!starGraph || node == null || node.x === undefined) return;
+    const dist = 140;
+    const r = Math.hypot(node.x, node.y, node.z || 1) || 1;
+    const ratio = 1 + dist / r;
+    starGraph.cameraPosition({ x: node.x * ratio, y: node.y * ratio, z: node.z * ratio }, node, 800);
+  }
+
+  function bindStarResize() {
+    if (bindStarResize._bound) return;
+    bindStarResize._bound = true;
+    window.addEventListener('resize', function () {
+      if (!isStarMode || !starGraph) return;
+      const area = document.getElementById('content-area');
+      if (area) starGraph.width(area.clientWidth).height(area.clientHeight);
+    });
+  }
+
+  // —— 搜索：在星图中高亮并飞向命中节点 ——
+  function starSearch(q) {
+    starHighlight.clear();
+    if (!q) { if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); hideStarInfo(); return; }
+    const raw = getRawGraph();
+    const hits = raw.nodes.filter(n =>
+      (n.name + ' ' + (n.tags || []).join(' ') + ' ' + (n.body || '')).toLowerCase().includes(q));
+    hits.forEach(n => starHighlight.add(n.id));
+    if (starGraph) {
+      starGraph.nodeColor(starGraph.nodeColor());
+      const gn = starGraph.graphData().nodes.find(x => x.id === (hits[0] && hits[0].id));
+      focusNode(gn);
+    }
+  }
+
+  // —— 节点信息 / 编辑面板 ——
+  function showNodeInfo(id) {
+    const raw = getRawGraph();
+    const node = raw.nodes.find(n => n.id === id);
+    if (!node) return;
+    const info = document.getElementById('star-info');
+    const conns = raw.links.filter(l => l.source === id || l.target === id);
+    const connHtml = conns.map(l => {
+      const isSrc = l.source === id;
+      const otherId = isSrc ? l.target : l.source;
+      const other = raw.nodes.find(n => n.id === otherId);
+      const arrow = isSrc ? '→' : '←';
+      return `<li class="star-conn">
+        <span class="star-conn-type">${escapeHtml(l.type || '关联')}</span>
+        <span class="star-conn-node">${arrow} ${escapeHtml(other ? other.name : otherId)}</span>
+        <button class="star-conn-del" data-link="${escapeHtml(l.id)}" title="删除此连线">✕</button>
+      </li>`;
+    }).join('') || '<li class="star-conn-none">暂无连线，点「＋连线」建立关系</li>';
+
+    const refsHtml = (node.refs && node.refs.length)
+      ? node.refs.map(r => `<button class="star-ref-btn" data-ref="${escapeHtml(r)}">查看考点 →</button>`).join(' ')
+      : '';
+
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:${GROUP_COLORS[node.group] || '#89b4fa'}">${GROUP_NAMES[node.group] || node.group}</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <h3 class="star-info-title">${escapeHtml(node.name)}</h3>
+      <div class="star-info-tags">${(node.tags || []).map(t => `<span class="point-tag">${escapeHtml(t)}</span>`).join('')}</div>
+      <div class="star-info-body">${(node.body || '').split('\n').filter(Boolean).map(l => `<p>${escapeHtml(l)}</p>`).join('')}</div>
+      ${refsHtml ? `<div class="star-info-refs">${refsHtml}</div>` : ''}
+      <div class="star-info-section-title">连接 (${conns.length})</div>
+      <ul class="star-conns">${connHtml}</ul>
+      <div class="star-info-actions">
+        <button class="btn-pill" id="star-edit-node">✎ 编辑</button>
+        <button class="btn-wrong" id="star-del-node">🗑 删除</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    info.querySelectorAll('.star-conn-del').forEach(btn =>
+      btn.addEventListener('click', () => deleteLink(btn.dataset.link)));
+    info.querySelectorAll('.star-ref-btn').forEach(btn =>
+      btn.addEventListener('click', () => jumpToKbPoint(btn.dataset.ref)));
+    document.getElementById('star-edit-node').addEventListener('click', () => showNodeEditForm(id));
+    document.getElementById('star-del-node').addEventListener('click', () => {
+      if (confirm('确定删除知识点「' + node.name + '」及其相关连线？')) deleteNode(id);
+    });
+  }
+
+  function showLinkInfo(l) {
+    const raw = getRawGraph();
+    const sId = (typeof l.source === 'object' && l.source) ? l.source.id : l.source;
+    const tId = (typeof l.target === 'object' && l.target) ? l.target.id : l.target;
+    const info = document.getElementById('star-info');
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:#45475a">连线</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <h3 class="star-info-title">${escapeHtml(nodeNameOf(raw, sId))} → ${escapeHtml(nodeNameOf(raw, tId))}</h3>
+      <div class="star-info-body"><p><b>关系：</b>${escapeHtml(l.type || '关联')}</p>${l.label ? '<p>' + escapeHtml(l.label) + '</p>' : ''}</div>
+      <div class="star-info-actions">
+        <button class="btn-wrong" id="star-del-link">🗑 删除连线</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('star-del-link').addEventListener('click', () => deleteLink(l.id));
+  }
+
+  function hideStarInfo() {
+    const info = document.getElementById('star-info');
+    if (info) info.classList.add('hidden');
+  }
+
+  // —— 表单：新增/编辑节点 & 新增连线 ——
+  function groupOptions(selected) {
+    return GROUP_IDS.map(g =>
+      `<option value="${g}"${g === selected ? ' selected' : ''}>${GROUP_NAMES[g]}</option>`).join('');
+  }
+
+  function showAddNodeForm() {
+    const info = document.getElementById('star-info');
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:#a6e3a1">新增节点</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <div class="star-form">
+        <label>名称<input type="text" id="f-node-name" placeholder="如：肝性脑病"></label>
+        <label>科目<select id="f-node-group">${groupOptions('physio')}</select></label>
+        <label>标签（逗号分隔）<input type="text" id="f-node-tags" placeholder="如：消化,神经"></label>
+        <label>正文<textarea id="f-node-body" rows="4" placeholder="一句话讲清这个概念…"></textarea></label>
+        <label>回链考点 id（可选，逗号分隔）<input type="text" id="f-node-refs" placeholder="如：p_internal_001"></label>
+      </div>
+      <div class="star-info-actions">
+        <button class="btn-known" id="f-node-save">✓ 保存</button>
+        <button class="btn-pill" id="f-node-cancel">取消</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('f-node-cancel').addEventListener('click', hideStarInfo);
+    document.getElementById('f-node-save').addEventListener('click', () => {
+      const name = document.getElementById('f-node-name').value.trim();
+      if (!name) { alert('请填写名称'); return; }
+      const tags = document.getElementById('f-node-tags').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const refs = document.getElementById('f-node-refs').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const node = {
+        id: 'u_' + Date.now().toString(36) + Math.floor(Math.random() * 1000),
+        name,
+        group: document.getElementById('f-node-group').value,
+        tags,
+        body: document.getElementById('f-node-body').value.trim(),
+        refs
+      };
+      const user = loadUserGraph();
+      user.nodes.push(node);
+      saveUserGraph(user);
+      hideStarInfo();
+      refreshStar();
+    });
+  }
+
+  function showNodeEditForm(id) {
+    const raw = getRawGraph();
+    const node = raw.nodes.find(n => n.id === id);
+    if (!node) return;
+    const info = document.getElementById('star-info');
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:#89b4fa">编辑节点</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <div class="star-form">
+        <label>名称<input type="text" id="f-node-name" value="${escapeHtml(node.name)}"></label>
+        <label>科目<select id="f-node-group">${groupOptions(node.group)}</select></label>
+        <label>标签（逗号分隔）<input type="text" id="f-node-tags" value="${escapeHtml((node.tags || []).join(','))}"></label>
+        <label>正文<textarea id="f-node-body" rows="4">${escapeHtml(node.body || '')}</textarea></label>
+        <label>回链考点 id（可选，逗号分隔）<input type="text" id="f-node-refs" value="${escapeHtml((node.refs || []).join(','))}"></label>
+      </div>
+      <div class="star-info-actions">
+        <button class="btn-known" id="f-node-save">✓ 保存</button>
+        <button class="btn-pill" id="f-node-cancel">取消</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('f-node-cancel').addEventListener('click', hideStarInfo);
+    document.getElementById('f-node-save').addEventListener('click', () => {
+      const name = document.getElementById('f-node-name').value.trim();
+      if (!name) { alert('请填写名称'); return; }
+      const tags = document.getElementById('f-node-tags').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const refs = document.getElementById('f-node-refs').value.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      const updated = {
+        id, name,
+        group: document.getElementById('f-node-group').value,
+        tags, body: document.getElementById('f-node-body').value.trim(), refs
+      };
+      const user = loadUserGraph();
+      const idx = user.nodes.findIndex(n => n.id === id);
+      if (idx >= 0) user.nodes[idx] = updated;
+      else user.nodes.push(updated); // 覆盖种子节点
+      saveUserGraph(user);
+      hideStarInfo();
+      refreshStar();
+      showNodeInfo(id);
+    });
+  }
+
+  function showAddLinkForm() {
+    const raw = getRawGraph();
+    const opts = raw.nodes.map(n => `<option value="${n.id}">${escapeHtml(n.name)}</option>`).join('');
+    const info = document.getElementById('star-info');
+    info.innerHTML = `
+      <div class="star-info-head">
+        <span class="star-info-badge" style="background:#f9e2af">新增连线</span>
+        <button class="btn-icon" id="star-info-close">✕</button>
+      </div>
+      <div class="star-form">
+        <label>起点（源）<select id="f-link-src">${opts}</select></label>
+        <label>终点（目标）<select id="f-link-tgt">${opts}</select></label>
+        <label>关系类型<input type="text" id="f-link-type" placeholder="如：病因 / 机制 / 先修"></label>
+        <label>说明（可选）<input type="text" id="f-link-label" placeholder="一句话描述关系"></label>
+      </div>
+      <div class="star-info-actions">
+        <button class="btn-known" id="f-link-save">✓ 保存</button>
+        <button class="btn-pill" id="f-link-cancel">取消</button>
+      </div>
+    `;
+    info.classList.remove('hidden');
+    document.getElementById('star-info-close').addEventListener('click', hideStarInfo);
+    document.getElementById('f-link-cancel').addEventListener('click', hideStarInfo);
+    document.getElementById('f-link-save').addEventListener('click', () => {
+      const source = document.getElementById('f-link-src').value;
+      const target = document.getElementById('f-link-tgt').value;
+      if (!source || !target) { alert('请选择两端节点'); return; }
+      if (source === target) { alert('起点和终点不能相同'); return; }
+      const user = loadUserGraph();
+      user.links.push({
+        id: 'ul_' + Date.now().toString(36) + Math.floor(Math.random() * 1000),
+        source, target,
+        type: document.getElementById('f-link-type').value.trim() || '关联',
+        label: document.getElementById('f-link-label').value.trim()
+      });
+      saveUserGraph(user);
+      hideStarInfo();
+      refreshStar();
+    });
+  }
+
+  // —— 删除 ——
+  function deleteNode(id) {
+    const user = loadUserGraph();
+    if (id.indexOf('u_') === 0) {
+      user.nodes = user.nodes.filter(n => n.id !== id);
+      user.links = user.links.filter(l => l.source !== id && l.target !== id);
+    } else {
+      user.deletedNodes.push(id);
+      // 删除种子节点的同时，去掉引用它的用户连线
+      user.links = user.links.filter(l => l.source !== id && l.target !== id);
+    }
+    saveUserGraph(user);
+    hideStarInfo();
+    refreshStar();
+  }
+  function deleteLink(linkId) {
+    const user = loadUserGraph();
+    if (linkId.indexOf('seed_l') === 0) user.deletedLinks.push(linkId);
+    else user.links = user.links.filter(l => l.id !== linkId);
+    saveUserGraph(user);
+    hideStarInfo();
+    refreshStar();
+  }
+
+  // —— 刷新（根据当前是否 3D 渲染决定更新方式）——
+  function refreshStar() {
+    const raw = getRawGraph();
+    if (starGraph) {
+      starGraph.graphData(cloneGraph(raw));
+    } else {
+      renderStarFallback(raw);
+    }
+  }
+
+  // —— 从星图跳转到 M1 考点详情 ——
+  function jumpToKbPoint(refId) {
+    exitStar();
+    document.getElementById('search-input').value = '';
+    openDetail(refId);
+  }
+
+  // —— 导出 / 导入 我的编辑 ——
+  function exportStar() {
+    const user = loadUserGraph();
+    const data = JSON.stringify(user, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '星图编辑_' + todayStr() + '.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function importStar(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (ev) {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (!data || !Array.isArray(data.nodes) || !Array.isArray(data.links)) {
+          throw new Error('格式不正确');
+        }
+        const merged = {
+          nodes: data.nodes,
+          links: data.links,
+          deletedNodes: Array.isArray(data.deletedNodes) ? data.deletedNodes : [],
+          deletedLinks: Array.isArray(data.deletedLinks) ? data.deletedLinks : []
+        };
+        saveUserGraph(merged);
+        alert('已导入 ' + merged.nodes.length + ' 个节点、' + merged.links.length + ' 条连线');
+        refreshStar();
+      } catch (err) {
+        alert('导入失败：' + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  }
+
+  // —— 降级列表视图（CDN 不可用时仍可编辑）——
+  function renderStarFallback(raw) {
+    const mount = document.getElementById('star-graph');
+    if (!mount) return;
+    const nodeItems = raw.nodes.map(n =>
+      `<li class="star-li" data-node="${n.id}">
+        <i class="star-dot" style="background:${GROUP_COLORS[n.group] || '#89b4fa'}"></i>
+        <span class="star-li-name">${escapeHtml(n.name)}</span>
+        <span class="star-li-grp">${GROUP_NAMES[n.group] || n.group}</span>
+        <span class="star-li-deg">${n.deg || 0} 连</span>
+      </li>`).join('');
+    mount.innerHTML = `
+      <div class="star-fallback">
+        <div class="star-fallback-note">⚠️ 3D 引擎未能加载（可能离线或被网络拦截）。已切换为可编辑列表视图；联网后刷新即可获得星河可视化。</div>
+        <ul class="star-list">${nodeItems}</ul>
+      </div>`;
+    mount.querySelectorAll('.star-li').forEach(li =>
+      li.addEventListener('click', () => showNodeInfo(li.dataset.node)));
+  }
+
+  function exitStar() {
+    isStarMode = false;
+    starHighlight.clear();
+    const b = document.getElementById('btn-star');
+    if (b) b.classList.remove('active');
+    document.getElementById('app-container').classList.remove('star-active');
+    if (starGraph) {
+      try { if (typeof starGraph.pauseAnimation === 'function') starGraph.pauseAnimation(); } catch (e) {}
+      starGraph = null;
+    }
+    document.getElementById('search-input').value = '';
+    // 回到默认浏览态（欢迎页）
+    const bc = document.getElementById('breadcrumb');
+    if (bc) bc.innerHTML = '';
+    const area = document.getElementById('content-area');
+    if (area) area.innerHTML = `
+      <div class="welcome">
+        <h2>👋 欢迎使用 306 考研复习系统</h2>
+        <p>点击左侧科目开始浏览考点，或使用上方搜索框查找内容。</p>
+        <p>目标：天津医科大学 精神病与精神卫生学 专硕 (105105)</p>
+      </div>`;
   }
 
   // ===== 启动 =====
