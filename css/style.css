@@ -942,6 +942,7 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
 .star-conn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; background: var(--bg-surface0); margin-bottom: 5px; font-size: .8rem; }
 .star-conn-type { flex-shrink: 0; font-size: .68rem; color: var(--accent); background: rgba(137,180,250,.14); padding: 2px 7px; border-radius: 999px; }
 .star-conn-node { flex: 1; color: var(--text); }
+.star-conn-label { display: block; width: 100%; font-size: .72rem; color: var(--text-subtle); margin-top: 3px; line-height: 1.5; }
 .star-conn-del { flex-shrink: 0; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: .82rem; padding: 2px 4px; border-radius: 6px; }
 .star-conn-del:hover { color: var(--red); background: rgba(243,139,168,.16); }
 .star-conn-none { color: var(--text-muted); font-size: .78rem; padding: 4px 2px; }

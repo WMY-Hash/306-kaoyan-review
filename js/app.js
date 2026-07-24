@@ -20,6 +20,7 @@
   let isStarMode = false;
   let starGraph = null;            // ForceGraph3D 实例
   let starHighlight = new Set();   // 搜索高亮的节点 id
+  let starShowLinkLabels = true;   // 是否在连线上渲染关系说明
   let reviewSource = 'point'; // 'point' | 'wrong' | 'queue'
 
   // ===== 致命错误可视化（避免静默白屏）=====
@@ -1450,6 +1451,7 @@
       <div class="star-toolbar">
         <button id="star-add-node" class="btn-pill" title="新增知识点">＋ 节点</button>
         <button id="star-add-link" class="btn-pill" title="连接两个知识点">＋ 连线</button>
+        <button id="star-toggle-labels" class="btn-pill active" title="在连线上显示关系说明">连线说明</button>
         <button id="star-export" class="btn-pill" title="导出我的编辑">⬇ 导出</button>
         <button id="star-import" class="btn-pill" title="导入备份">⬆ 导入</button>
         <button id="star-reset-view" class="btn-pill" title="复位视角">⟳ 视角</button>
@@ -1466,6 +1468,11 @@
     document.getElementById('star-import').addEventListener('click', () => document.getElementById('star-import-file').click());
     document.getElementById('star-import-file').addEventListener('change', importStar);
     document.getElementById('star-reset-view').addEventListener('click', () => { if (starGraph) starGraph.zoomToFit(600, 40); });
+    document.getElementById('star-toggle-labels').addEventListener('click', () => {
+      starShowLinkLabels = !starShowLinkLabels;
+      const btn = document.getElementById('star-toggle-labels');
+      if (btn) btn.classList.toggle('active', starShowLinkLabels);
+    });
 
     bindStarResize();
 
@@ -1505,6 +1512,27 @@
           .onLinkClick(l => { showLinkInfo(l); });
         // 引擎稳定后自动适配视角
         starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
+        // 在连线中点渲染关系说明文字（需 three-spritetext；缺失则跳过，仅显示普通连线）
+        if (typeof window.SpriteText === 'function') {
+          starGraph
+            .linkThreeObject(l => {
+              const text = (l.type ? l.type + '：' : '') + (l.label || '');
+              const sp = new window.SpriteText(text.length > 22 ? text.slice(0, 22) + '…' : text);
+              sp.color = '#cdd6f4';
+              sp.backgroundColor = 'rgba(17,17,27,0.72)';
+              sp.padding = 2;
+              sp.borderRadius = 3;
+              sp.fontSize = 4.2;
+              sp.sizeAttenuation = true;
+              return sp;
+            })
+            .linkPositionUpdate((obj, coords) => {
+              if (!obj) return;
+              const s = coords.start, e = coords.end;
+              obj.position.set((s.x + e.x) / 2, (s.y + e.y) / 2, (s.z + e.z) / 2);
+              obj.visible = starShowLinkLabels;
+            });
+        }
       } catch (e) {
         console.warn('3D 渲染初始化失败，降级为列表视图：', e);
         starGraph = null;
@@ -1571,6 +1599,7 @@
         <span class="star-conn-type">${escapeHtml(l.type || '关联')}</span>
         <span class="star-conn-node">${arrow} ${escapeHtml(other ? other.name : otherId)}</span>
         <button class="star-conn-del" data-link="${escapeHtml(l.id)}" title="删除此连线">✕</button>
+        ${l.label ? `<span class="star-conn-label">${escapeHtml(l.label)}</span>` : ''}
       </li>`;
     }).join('') || '<li class="star-conn-none">暂无连线，点「＋连线」建立关系</li>';
 
