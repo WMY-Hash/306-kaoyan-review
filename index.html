@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>306 考研复习 — 考点库 & 卡片系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- 顶部统计栏 -->
+  <header id="top-bar">
+    <div class="brand">
+      <span class="brand-logo">📖</span>
+      <span class="brand-name">306 考点库</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-total">0</span>
+      <span class="stat-label">总考点</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-known">0</span>
+      <span class="stat-label">已掌握</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-review">0</span>
+      <span class="stat-label">待复习</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num" id="stat-coverage">0%</span>
+      <span class="stat-label">加权覆盖率</span>
+    </div>
+    <div class="stat-actions">
+      <button id="btn-export" class="btn-pill" title="导出进度">📤 导出</button>
+      <button id="btn-import" class="btn-pill" title="导入进度">📥 导入</button>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+    </div>
+  </header>
+
+  <!-- 搜索栏 -->
+  <div id="search-bar">
+    <div class="search-wrap">
+      <input type="text" id="search-input" placeholder="搜索考点（标题 / 正文 / 标签）…" autocomplete="off">
+    </div>
+    <button id="btn-dashboard" class="btn-dash" title="进度看板">📊 看板</button>
+    <button id="btn-resources" class="btn-dash" title="资料索引">📚 资料</button>
+    <button id="btn-plan" class="btn-dash" title="复习计划">🗓 计划</button>
+    <button id="btn-wrong-book" class="btn-wrong" title="错题本">📕 错题本</button>
+  </div>
+
+  <!-- 主体三栏 -->
+  <div id="app-container">
+    <!-- 左侧科目导航 -->
+    <nav id="sidebar">
+      <div class="sidebar-header">📚 科目导航</div>
+      <ul id="subject-list"></ul>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main id="main-content">
+      <div id="breadcrumb"></div>
+      <div id="content-area">
+        <div class="welcome">
+          <h2>👋 欢迎使用 306 考研复习系统</h2>
+          <p>点击左侧科目开始浏览考点，或使用上方搜索框查找内容。</p>
+          <p>目标：天津医科大学 精神病与精神卫生学 专硕 (105105)</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧详情面板 -->
+    <aside id="detail-panel" class="hidden">
+      <div class="panel-header">
+        <h3 id="detail-title"></h3>
+        <button id="btn-close-detail" class="btn-icon">✕</button>
+      </div>
+      <div class="panel-body">
+        <div id="detail-meta"></div>
+        <div id="detail-body"></div>
+        <div id="detail-cards"></div>
+        <div id="detail-resources"></div>
+      </div>
+      <div class="panel-footer">
+        <button id="btn-review-point" class="btn-primary">🃏 复习此考点卡片</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 卡片复习弹窗 -->
+  <div id="card-modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <span id="card-progress"></span>
+        <button id="btn-close-modal" class="btn-icon">✕</button>
+      </div>
+      <div class="card-progress-track"><div class="card-progress-fill" id="card-progress-fill"></div></div>
+      <div class="card-container" id="card-container">
+        <div class="card-inner" id="card-inner">
+          <div class="card-front" id="card-front"></div>
+          <div class="card-back" id="card-back"></div>
+        </div>
+      </div>
+      <div class="card-hint">点击卡片翻面 · 空格键翻面</div>
+      <div class="card-actions hidden" id="card-actions">
+        <button class="btn-wrong" id="btn-forgot">✗ 不认识</button>
+        <button class="btn-known" id="btn-knew">✓ 认识</button>
+      </div>
+      <div class="card-shortcuts">
+        <kbd>←</kbd> 不认识 &nbsp;&nbsp; <kbd>→</kbd> 认识 &nbsp;&nbsp; <kbd>Space</kbd> 翻面
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据 -->
+  <script src="data/kb.js"></script>
+  <script src="data/plan.js"></script>
+  <!-- 应用逻辑 -->
+  <script src="js/app.js"></script>
+  <!-- 兜底：若外部脚本被拦截（如用不支持 JS 的预览器打开），给出正确打开方式 -->
+  <script>
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        var sl = document.getElementById('subject-list');
+        if (sl && sl.children.length === 0) {
+          var area = document.getElementById('content-area');
+          if (area) area.innerHTML = '<div class="no-results" style="text-align:left;line-height:1.9;padding:36px 28px">'
+            + '<p style="font-size:1.15rem;color:var(--red);font-weight:700">⚠️ 没有完全加载</p>'
+            + '<p>左侧科目列表为空，说明脚本未执行。请用以下方式打开：</p>'
+            + '<p>① 双击 <b>index.html</b> 用 <b>Chrome / Edge / Firefox</b> 打开；</p>'
+            + '<p>② 在 <b>kaoyan-review</b> 目录运行 <b style="color:var(--accent)">python3 -m http.server 8080</b>，访问 <b>http://localhost:8080/</b>；</p>'
+            + '<p>③ 不要用 IDE 内置预览 / 聊天窗口 / 在线 HTML 预览打开，它们大多不执行本地脚本。</p>'
+            + '</div>';
+        }
+      }, 800);
+    });
+  </script>
+</body>
+</html>
