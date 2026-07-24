@@ -20,7 +20,9 @@
   let isStarMode = false;
   let starGraph = null;            // ForceGraph3D 实例
   let starHighlight = new Set();   // 搜索高亮的节点 id
-  let starShowLinkLabels = true;   // 是否在连线上渲染关系说明
+  let starClickReveal = true;      // 点击连线时，在该线上显示关系说明
+  let starClickedLinkId = null;    // 当前被点击、需要显示说明的连线 id
+  let starLinkSprites = {};         // linkId -> SpriteText 实例（用于即时切换可见性）
   let reviewSource = 'point'; // 'point' | 'wrong' | 'queue'
 
   // ===== 致命错误可视化（避免静默白屏）=====
@@ -1451,7 +1453,7 @@
       <div class="star-toolbar">
         <button id="star-add-node" class="btn-pill" title="新增知识点">＋ 节点</button>
         <button id="star-add-link" class="btn-pill" title="连接两个知识点">＋ 连线</button>
-        <button id="star-toggle-labels" class="btn-pill active" title="在连线上显示关系说明">连线说明</button>
+        <button id="star-toggle-labels" class="btn-pill active" title="开启后，点击任意连线即可在该线上浮现关系说明">点击显说明</button>
         <button id="star-export" class="btn-pill" title="导出我的编辑">⬇ 导出</button>
         <button id="star-import" class="btn-pill" title="导入备份">⬆ 导入</button>
         <button id="star-reset-view" class="btn-pill" title="复位视角">⟳ 视角</button>
@@ -1469,14 +1471,16 @@
     document.getElementById('star-import-file').addEventListener('change', importStar);
     document.getElementById('star-reset-view').addEventListener('click', () => { if (starGraph) starGraph.zoomToFit(600, 40); });
     document.getElementById('star-toggle-labels').addEventListener('click', () => {
-      starShowLinkLabels = !starShowLinkLabels;
+      starClickReveal = !starClickReveal;
       const btn = document.getElementById('star-toggle-labels');
-      if (btn) btn.classList.toggle('active', starShowLinkLabels);
+      if (btn) btn.classList.toggle('active', starClickReveal);
+      applyLinkLabelVisibility();
     });
 
     bindStarResize();
 
     const raw = getRawGraph();
+    starLinkSprites = {};
     // 先探测 WebGL 是否可用；不可用则直接走可编辑列表降级，避免 3D 初始化抛错把界面冲掉
     const webglOk = (function () {
       try {
@@ -1508,21 +1512,26 @@
             const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
             return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
           })
-          .onNodeClick(n => { starHighlight.clear(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
-          .onLinkClick(l => { showLinkInfo(l); });
+        .onNodeClick(n => { starHighlight.clear(); starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
+        .onLinkClick(l => { starClickedLinkId = l.id; applyLinkLabelVisibility(); showLinkInfo(l); })
+        .onBackgroundClick(() => { starClickedLinkId = null; applyLinkLabelVisibility(); });
+        applyLinkLabelVisibility(); // 初始全部隐藏，仅点击的连线才显示
         // 引擎稳定后自动适配视角
         starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
         // 在连线中点渲染关系说明文字（需 three-spritetext；缺失则跳过，仅显示普通连线）
+        // 默认不显示；仅当用户点击某条连线（且开启「点击显说明」）时，该线才浮现说明
         if (typeof window.SpriteText === 'function') {
           starGraph
             .linkThreeObject(l => {
               const text = (l.type ? l.type + '：' : '') + (l.label || '');
-              const sp = new window.SpriteText(text.length > 22 ? text.slice(0, 22) + '…' : text);
+              const sp = new window.SpriteText(text.length > 24 ? text.slice(0, 24) + '…' : text);
+              sp.__linkId = l.id;
+              starLinkSprites[l.id] = sp;
               sp.color = '#cdd6f4';
-              sp.backgroundColor = 'rgba(17,17,27,0.72)';
-              sp.padding = 2;
+              sp.backgroundColor = 'rgba(17,17,27,0.78)';
+              sp.padding = 2.5;
               sp.borderRadius = 3;
-              sp.fontSize = 4.2;
+              sp.fontSize = 4.6;
               sp.sizeAttenuation = true;
               return sp;
             })
@@ -1530,7 +1539,7 @@
               if (!obj) return;
               const s = coords.start, e = coords.end;
               obj.position.set((s.x + e.x) / 2, (s.y + e.y) / 2, (s.z + e.z) / 2);
-              obj.visible = starShowLinkLabels;
+              obj.visible = starClickReveal && obj.__linkId === starClickedLinkId;
             });
         }
       } catch (e) {
@@ -1565,6 +1574,14 @@
       if (!isStarMode || !starGraph) return;
       const area = document.getElementById('content-area');
       if (area) starGraph.width(area.clientWidth).height(area.clientHeight);
+    });
+  }
+
+  // 即时切换各连线说明的可见性（仅被点击的连线显示）
+  function applyLinkLabelVisibility() {
+    Object.keys(starLinkSprites).forEach(id => {
+      const sp = starLinkSprites[id];
+      if (sp) sp.visible = starClickReveal && id === starClickedLinkId;
     });
   }
 
