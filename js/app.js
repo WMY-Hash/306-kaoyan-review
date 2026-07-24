@@ -22,7 +22,6 @@
   let starHighlight = new Set();   // 搜索高亮的节点 id
   let starClickReveal = true;      // 点击连线时，在该线上显示关系说明
   let starClickedLinkId = null;    // 当前被点击、需要显示说明的连线 id
-  let starLinkSprites = {};         // linkId -> SpriteText 实例（用于即时切换可见性）
   let reviewSource = 'point'; // 'point' | 'wrong' | 'queue'
 
   // ===== 致命错误可视化（避免静默白屏）=====
@@ -1463,7 +1462,7 @@
         <input type="file" id="star-import-file" accept=".json" style="display:none">
       </div>
       <div class="star-legend">${legend}</div>
-      <div class="star-hint">拖拽旋转 · 滚轮缩放 · 点击节点查看/编辑 · 顶部搜索框可定位节点</div>
+      <div class="star-hint">拖拽旋转 · 滚轮缩放 · 点击节点查看/编辑 · 点击连线看关系说明 · 顶部搜索框可定位节点</div>
       <div class="star-info hidden" id="star-info"></div>
     `;
 
@@ -1483,7 +1482,6 @@
     bindStarResize();
 
     const raw = getRawGraph();
-    starLinkSprites = {};
     // 先探测 WebGL 是否可用；不可用则直接走可编辑列表降级，避免 3D 初始化抛错把界面冲掉
     const webglOk = (function () {
       try {
@@ -1522,33 +1520,8 @@
         applyLinkLabelVisibility(); // 初始全部隐藏，仅点击的连线才显示
         // 引擎稳定后自动适配视角
         starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
-        // 在连线中点渲染关系说明文字（需 three-spritetext；缺失则跳过，仅显示普通连线）
-        // 默认不显示；仅当用户点击某条连线（且开启「点击显说明」）时，该线才浮现说明
-        if (typeof window.SpriteText === 'function') {
-          starGraph
-            .linkThreeObject(l => {
-              const text = (l.type ? l.type + '：' : '') + (l.label || '');
-              const sp = new window.SpriteText(text.length > 22 ? text.slice(0, 22) + '…' : text);
-              sp.__linkId = l.id;
-              starLinkSprites[l.id] = sp;
-              sp.color = '#e8ecf4';             // 浅色文字
-              sp.backgroundColor = false;        // 去掉白底框，避免覆盖节点
-              sp.padding = 0;
-              sp.borderRadius = 0;
-              sp.fontSize = 2.2;                 // 小字号
-              sp.fontWeight = 600;
-              sp.sizeAttenuation = false;        // 文字大小不随相机距离缩放
-              sp.strokeColor = 'rgba(13,17,23,.85)';  // 深色描边在暗色底上增加可读
-              sp.strokeWidth = 0.18;
-              return sp;
-            })
-            .linkPositionUpdate((obj, coords) => {
-              if (!obj) return;
-              const s = coords.start, e = coords.end;
-              obj.position.set((s.x + e.x) / 2, (s.y + e.y) / 2, (s.z + e.z) / 2);
-              obj.visible = starClickReveal && obj.__linkId === starClickedLinkId;
-            });
-        }
+        // 选中连线的关系说明改用 HTML 浮层（矢量文字，清晰不糊），不再用 3D 文字纹理
+        // 标签位置每帧由 graph2ScreenCoords 把连线中点投影到屏幕坐标，见 applyLinkLabelVisibility()
       } catch (e) {
         console.warn('3D 渲染初始化失败，降级为列表视图：', e);
         starGraph = null;
@@ -1584,12 +1557,51 @@
     });
   }
 
-  // 即时切换各连线说明的可见性（仅被点击的连线显示）
+  // 选中连线的关系说明以 HTML 浮层呈现（矢量文字，清晰不糊）。
+  // 每帧把该连线中点（世界坐标）用 graph2ScreenCoords 投影到屏幕坐标，定位浮层。
+  let starLabelRAF = null;
+  function starLinkLabelEl() {
+    let el = document.getElementById('star-link-label');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'star-link-label';
+      const mount = document.getElementById('star-graph');
+      (mount || document.getElementById('content-area')).appendChild(el);
+    }
+    return el;
+  }
+  function frameLinkLabel() {
+    const el = document.getElementById('star-link-label');
+    const link = starGraph ? starGraph.graphData().links.find(l => l.id === starClickedLinkId) : null;
+    if (!el || !link || !starGraph) { if (starLabelRAF) { cancelAnimationFrame(starLabelRAF); starLabelRAF = null; } return; }
+    const s = link.source, t = link.target;
+    if (typeof s !== 'object' || s.x === undefined || typeof t !== 'object' || t.x === undefined) {
+      starLabelRAF = requestAnimationFrame(frameLinkLabel);
+      return;
+    }
+    let p;
+    try { p = starGraph.graph2ScreenCoords((s.x + t.x) / 2, (s.y + t.y) / 2, (s.z + t.z) / 2); }
+    catch (e) { starLabelRAF = requestAnimationFrame(frameLinkLabel); return; }
+    el.style.left = p.x + 'px';
+    el.style.top = p.y + 'px';
+    starLabelRAF = requestAnimationFrame(frameLinkLabel);
+  }
   function applyLinkLabelVisibility() {
-    Object.keys(starLinkSprites).forEach(id => {
-      const sp = starLinkSprites[id];
-      if (sp) sp.visible = starClickReveal && id === starClickedLinkId;
-    });
+    const el = starLinkLabelEl();
+    const link = starGraph ? starGraph.graphData().links.find(l => l.id === starClickedLinkId) : null;
+    if (starClickReveal && link) {
+      el.textContent = (link.type ? link.type + '：' : '') + (link.label || '');
+      el.classList.add('show');
+      if (!starLabelRAF) starLabelRAF = requestAnimationFrame(frameLinkLabel);
+    } else {
+      el.classList.remove('show');
+      if (starLabelRAF) { cancelAnimationFrame(starLabelRAF); starLabelRAF = null; }
+    }
+  }
+  function stopStarLabel() {
+    if (starLabelRAF) { cancelAnimationFrame(starLabelRAF); starLabelRAF = null; }
+    const el = document.getElementById('star-link-label');
+    if (el) el.classList.remove('show');
   }
 
   // —— 搜索：在星图中高亮并飞向命中节点 ——
@@ -1932,6 +1944,7 @@
       try { if (typeof starGraph.pauseAnimation === 'function') starGraph.pauseAnimation(); } catch (e) {}
       starGraph = null;
     }
+    stopStarLabel();
     document.getElementById('search-input').value = '';
     // 回到默认浏览态（欢迎页）
     const bc = document.getElementById('breadcrumb');

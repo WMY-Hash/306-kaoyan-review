@@ -912,6 +912,19 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
   backdrop-filter: blur(6px); max-width: 36%; text-align: right;
 }
 
+/* 选中连线的关系说明浮层（真正的 DOM 矢量文字，清晰不糊） */
+#star-link-label {
+  position: absolute; transform: translate(-50%, -50%);
+  max-width: 240px; padding: 5px 9px;
+  background: rgba(17,17,27,.94); color: var(--text);
+  border: 1px solid rgba(249,226,175,.55); border-radius: 7px;
+  font-size: 12px; line-height: 1.45; white-space: pre-wrap;
+  pointer-events: none; z-index: 7;
+  box-shadow: 0 3px 12px rgba(0,0,0,.55);
+  display: none;
+}
+#star-link-label.show { display: block; }
+
 /* 节点信息 / 编辑面板 */
 .star-info {
   position: absolute; top: 14px; right: 14px; z-index: 8;
