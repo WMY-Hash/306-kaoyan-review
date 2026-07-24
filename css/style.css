@@ -30,9 +30,9 @@
   --accent2: #a6e3a1;
 
   /* 玻璃 token（更透、更暖、blur 更足、厚度感更强） */
-  --glass: rgba(255,255,255,.065);
+  --glass: rgba(255,255,255,.085);
   --glass-strong: rgba(255,255,255,.10);
-  --glass-border: rgba(255,255,255,.17);
+  --glass-border: rgba(255,255,255,.22);
   --glass-hi: inset 0 1px 0 rgba(255,255,255,.18);
   --on-glass: rgba(232,240,236,.95);
   --glow-gold: 0 8px 32px rgba(232,200,121,.32);
@@ -712,7 +712,16 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 .kpi-num { font-size: 1.85rem; font-weight: 800; color: var(--text); line-height: 1; }
 .kpi-label { font-size: .76rem; color: var(--text-muted); }
 .dash-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-bottom: 14px; }
-.dash-panel { background: var(--bg-surface0); border: 1px solid var(--bg-surface1); border-radius: var(--radius-lg); padding: 18px; }
+.dash-panel {
+  background:
+    linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,0) 44%),
+    var(--glass);
+  backdrop-filter: blur(16px) saturate(155%);
+  -webkit-backdrop-filter: blur(16px) saturate(155%);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+  padding: 18px;
+  box-shadow: var(--shadow-md), var(--glass-hi);
+}
 .dash-panel h3 { font-size: 1rem; margin-bottom: 16px; color: var(--text); display: flex; align-items: center; gap: 8px; }
 
 /* 条形图（各科掌握度） */
@@ -1141,11 +1150,19 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
 
 /* 看板 KPI 卡：玻璃 */
 .kpi-card {
-  background: var(--glass);
+  background:
+    linear-gradient(158deg, rgba(255,255,255,.12), rgba(255,255,255,0) 48%),
+    var(--glass);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(14px) saturate(150%);
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  box-shadow: var(--shadow-sm), var(--glass-hi);
+  backdrop-filter: blur(14px) saturate(155%);
+  -webkit-backdrop-filter: blur(14px) saturate(155%);
+  box-shadow: var(--shadow-md), var(--glass-hi);
+  transition: transform .26s cubic-bezier(.22,1,.36,1), box-shadow .26s ease, border-color .26s ease;
+}
+.kpi-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(232,200,121,.42);
+  box-shadow: var(--shadow-lg), var(--glow-gold-soft);
 }
 
 /* 知识星图信息面板：玻璃浮层 */
