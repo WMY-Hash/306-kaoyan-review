@@ -90,12 +90,18 @@ body {
     radial-gradient(ellipse 220px 170px at 10% 90%, rgba(148,226,213,.18), transparent 56%),
     radial-gradient(ellipse 200px 150px at 94% 6%, rgba(232,200,121,.18), transparent 52%),
     radial-gradient(ellipse 280px 200px at 3% 3%, rgba(232,200,121,.14), transparent 56%),
+    /* ===== 雾气带（森林纵深感 — 柔和、低透明） ===== */
+    radial-gradient(ellipse 900px 240px at 28% 64%, rgba(200,228,214,.055), transparent 72%),
+    radial-gradient(ellipse 1100px 260px at 72% 38%, rgba(176,206,196,.045), transparent 74%),
+    radial-gradient(ellipse 760px 200px at 50% 86%, rgba(168,230,160,.05), transparent 70%),
     /* ===== 原有 hero 光晕（保留） ===== */
     radial-gradient(1320px 820px at 80% -14%, rgba(232,200,121,.16), transparent 58%),
     radial-gradient(1060px 720px at 8% 114%, rgba(148,226,213,.12), transparent 56%),
     radial-gradient(960px 640px at 52% 48%, rgba(168,230,160,.06), transparent 60%),
     radial-gradient(680px 480px at 16% 6%, rgba(232,200,121,.07), transparent 55%),
-    linear-gradient(160deg, #0c1311 0%, #0a1216 55%, #070b0a 100%);
+    /* ===== 森林深处纵向深度：底部加深（树影剪影层在更下方） ===== */
+    radial-gradient(135% 55% at 50% 104%, rgba(0,0,0,.55), transparent 60%),
+    linear-gradient(180deg, #0e1a16 0%, #0a1311 38%, #070d0b 72%, #030605 100%);
   color: var(--text);
   line-height: 1.65;
   overflow: hidden;
@@ -113,6 +119,20 @@ body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
 
 /* 删除旧的不可靠装饰层 */
 /* （body::before / body::after 已移除，萤火虫合并到 body background） */
+
+/* ===== 深邃森林剪影层（固定、置底、不拦截点击） ===== */
+/* z-index:-1 → 位于 body 背景之上、所有内容之下，树影从雾中浮出 */
+.forest-depth {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: url('assets/forest-silhouette.svg');
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: 100% auto;
+  opacity: .92;
+}
 
 /* ===== 顶部栏 ===== */
 #top-bar {
