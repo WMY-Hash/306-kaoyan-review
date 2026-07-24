@@ -862,12 +862,14 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
 }
 
 /* 星图模式：隐藏侧栏与详情面板，主区全屏给 3D 画布 */
-#app-container.star-active #sidebar { display: none; }
+#app-container.star-active #sidebar,
 #app-container.star-active #detail-panel { display: none; }
-#app-container.star-active #main-content { width: 100%; }
+#app-container.star-active #main-content {
+  width: 100%; height: 100%; position: relative; padding: 0; overflow: hidden;
+}
 #app-container.star-active #breadcrumb { display: none; }
 #app-container.star-active #content-area {
-  position: relative;
+  position: absolute; inset: 0;
   overflow: hidden;
   padding: 0;
   background:

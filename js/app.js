@@ -1470,33 +1470,46 @@
     bindStarResize();
 
     const raw = getRawGraph();
-    if (typeof window.ForceGraph3D === 'function') {
-      const mount = document.getElementById('star-graph');
-      const w = area.clientWidth || window.innerWidth;
-      const h = area.clientHeight || window.innerHeight;
-      starGraph = window.ForceGraph3D()(mount)
-        .width(w).height(h)
-        .backgroundColor('#0d1117')
-        .graphData(cloneGraph(raw))
-        .nodeId('id')
-        .nodeVal(n => 2 + (n.deg || 0) * 0.6)
-        .nodeColor(starNodeColor)
-        .nodeOpacity(0.95)
-        .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
-        .nodeThreeObjectExtend(false)
-        .linkColor(starLinkColor)
-        .linkWidth(0.6)
-        .linkOpacity(0.5)
-        .linkDirectionalArrowLength(2.2)
-        .linkDirectionalArrowRelPos(1)
-        .linkLabel(l => {
-          const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
-          return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
-        })
-        .onNodeClick(n => { starHighlight.clear(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
-        .onLinkClick(l => { showLinkInfo(l); });
-      // 引擎稳定后自动适配视角
-      starGraph.onEngineStop(() => starGraph.zoomToFit(500, 50));
+    // 先探测 WebGL 是否可用；不可用则直接走可编辑列表降级，避免 3D 初始化抛错把界面冲掉
+    const webglOk = (function () {
+      try {
+        const c = document.createElement('canvas');
+        return !!(c.getContext('webgl') || c.getContext('experimental-webgl'));
+      } catch (e) { return false; }
+    })();
+    if (typeof window.ForceGraph3D === 'function' && webglOk) {
+      try {
+        const mount = document.getElementById('star-graph');
+        const w = area.clientWidth || window.innerWidth;
+        const h = area.clientHeight || window.innerHeight;
+        starGraph = window.ForceGraph3D()(mount)
+          .width(w).height(h)
+          .backgroundColor('#0d1117')
+          .graphData(cloneGraph(raw))
+          .nodeId('id')
+          .nodeVal(n => 2 + (n.deg || 0) * 0.6)
+          .nodeColor(starNodeColor)
+          .nodeOpacity(0.95)
+          .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
+          .nodeThreeObjectExtend(false)
+          .linkColor(starLinkColor)
+          .linkWidth(0.6)
+          .linkOpacity(0.5)
+          .linkDirectionalArrowLength(2.2)
+          .linkDirectionalArrowRelPos(1)
+          .linkLabel(l => {
+            const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
+            return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
+          })
+          .onNodeClick(n => { starHighlight.clear(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
+          .onLinkClick(l => { showLinkInfo(l); });
+        // 引擎稳定后自动适配视角
+        starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
+      } catch (e) {
+        console.warn('3D 渲染初始化失败，降级为列表视图：', e);
+        starGraph = null;
+        renderStarFallback(raw);
+      }
     } else {
       // CDN 未加载（离线/被拦截）：降级为可编辑的列表视图
       renderStarFallback(raw);
@@ -1849,7 +1862,7 @@
       </li>`).join('');
     mount.innerHTML = `
       <div class="star-fallback">
-        <div class="star-fallback-note">⚠️ 3D 引擎未能加载（可能离线或被网络拦截）。已切换为可编辑列表视图；联网后刷新即可获得星河可视化。</div>
+        <div class="star-fallback-note">⚠️ 3D 星图未能启用（可能离线、网络拦截，或当前浏览器未开启 WebGL）。已切换为可编辑列表视图，新增/连线/编辑功能完全可用；换用支持 WebGL 的浏览器并联网即可看到星河可视化。</div>
         <ul class="star-list">${nodeItems}</ul>
       </div>`;
     mount.querySelectorAll('.star-li').forEach(li =>
