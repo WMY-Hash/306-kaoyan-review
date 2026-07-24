@@ -1407,13 +1407,16 @@
     return GROUP_COLORS[n.group] || '#89b4fa';
   }
   function starLinkColor(l) {
+    const s = (typeof l.source === 'object' ? l.source.id : l.source);
+    const t = (typeof l.target === 'object' ? l.target.id : l.target);
+    // 当前选中的连线：暖黄高亮，便于看清
+    if (starClickedLinkId && l.id === starClickedLinkId) return 'rgba(249,226,175,.95)';
     if (starHighlight.size) {
-      const s = (typeof l.source === 'object' ? l.source.id : l.source);
-      const t = (typeof l.target === 'object' ? l.target.id : l.target);
-      if (starHighlight.has(s) && starHighlight.has(t)) return 'rgba(166,227,161,.9)';
-      return 'rgba(120,126,140,.25)';
+      if (starHighlight.has(s) && starHighlight.has(t)) return 'rgba(166,227,161,.95)';
+      return 'rgba(120,126,140,.3)';
     }
-    return 'rgba(137,180,250,.35)';
+    // 基础连线：加粗提亮，未点击时也清晰可见
+    return 'rgba(137,180,250,.9)';
   }
 
   function toggleStarGraph() {
@@ -1504,17 +1507,18 @@
           .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
           .nodeThreeObjectExtend(false)
           .linkColor(starLinkColor)
-          .linkWidth(0.6)
-          .linkOpacity(0.5)
+          .linkWidth(1.2)
+          .linkOpacity(0.9)
           .linkDirectionalArrowLength(2.2)
           .linkDirectionalArrowRelPos(1)
+          .linkDirectionalArrowColor(starLinkColor)
           .linkLabel(l => {
             const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
             return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
           })
-        .onNodeClick(n => { starHighlight.clear(); starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); showNodeInfo(n.id); focusNode(n); })
-        .onLinkClick(l => { starClickedLinkId = l.id; applyLinkLabelVisibility(); showLinkInfo(l); })
-        .onBackgroundClick(() => { starClickedLinkId = null; applyLinkLabelVisibility(); });
+        .onNodeClick(n => { starHighlight.clear(); starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) { starGraph.nodeColor(starGraph.nodeColor()); starGraph.linkColor(starGraph.linkColor()); } showNodeInfo(n.id); focusNode(n); })
+        .onLinkClick(l => { starClickedLinkId = l.id; applyLinkLabelVisibility(); if (starGraph) starGraph.linkColor(starGraph.linkColor()); showLinkInfo(l); })
+        .onBackgroundClick(() => { starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) starGraph.linkColor(starGraph.linkColor()); });
         applyLinkLabelVisibility(); // 初始全部隐藏，仅点击的连线才显示
         // 引擎稳定后自动适配视角
         starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
@@ -1524,14 +1528,14 @@
           starGraph
             .linkThreeObject(l => {
               const text = (l.type ? l.type + '：' : '') + (l.label || '');
-              const sp = new window.SpriteText(text.length > 24 ? text.slice(0, 24) + '…' : text);
+              const sp = new window.SpriteText(text.length > 20 ? text.slice(0, 20) + '…' : text);
               sp.__linkId = l.id;
               starLinkSprites[l.id] = sp;
-              sp.color = '#cdd6f4';
-              sp.backgroundColor = 'rgba(17,17,27,0.78)';
-              sp.padding = 2.5;
-              sp.borderRadius = 3;
-              sp.fontSize = 4.6;
+              sp.color = '#e8ecf4';
+              sp.backgroundColor = 'rgba(17,17,27,0.75)';
+              sp.padding = 0.5;
+              sp.borderRadius = 0.6;
+              sp.fontSize = 1.0;
               sp.sizeAttenuation = true;
               return sp;
             })
