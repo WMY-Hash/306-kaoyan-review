@@ -42,14 +42,26 @@ python3 -m http.server 8080
 
 然后浏览器访问 `http://localhost:8080/`。此方式 `localStorage`、进度持久化、导入导出均最稳定。
 
-### 方式 B：本地服务（推荐，进度最稳）
-在 `kaoyan-review/` 目录下执行：
+### 方式 C：PWA 离线安装（推荐网页端用户）
+部署到任意 HTTPS 域名（已部署：<https://wmy-hash.github.io/306-kaoyan-review/>），
+浏览器右上角会出现「安装」入口；安装后可独立窗口启动、断网使用。
+
+- `manifest.webmanifest` 声明名称/图标/主题色
+- `sw.js` 用 stale-while-revalidate 策略缓存 app shell（首次访问后即可离线）
+- `vendor/` 已把 3D 星图依赖本地化，**断网不影响任何功能**
+
+### 方式 D：Electron 桌面软件（Windows）
+`electron/` 是独立子工程，提供 `npm start` 开发、`npm run build` 出安装包。
+详见 [`electron/README.md`](./electron/README.md)。
 
 ```bash
-python3 -m http.server 8080
+cd electron
+npm install                # 首次需要，国内建议先设 npmmirror
+npm start                  # 开发：弹窗加载 ../index.html
+npm run build              # 出 NSIS 安装包 + portable 绿色版到 ../release/
 ```
 
-然后浏览器访问 `http://localhost:8080/`。
+学习成本：会 `npm install / start / run build` 即可，约 0.5 小时上手。
 
 ### 日常复习建议
 1. 左侧点科目 → 章节 → 考点，浏览正文建立框架。
@@ -63,17 +75,37 @@ python3 -m http.server 8080
 
 ```
 kaoyan-review/
-├── index.html          # 单页应用入口
+├── index.html              # 单页应用入口
 ├── css/
-│   └── style.css       # Catppuccin Mocha 暗色主题
+│   └── style.css           # Catppuccin Mocha 暗色主题
 ├── js/
-│   └── app.js          # 渲染 / 搜索 / 翻卡 / 进度 / 统计
+│   └── app.js              # 渲染 / 搜索 / 翻卡 / 进度 / 统计
 ├── data/
-│   └── kb.js           # 考点库：window.KB_DATA = {...}
-└── README.md           # 本文件
+│   ├── kb.js               # 考点库：window.KB_DATA = {...}
+│   ├── plan.js             # 周计划：window.KB_PLAN = {...}
+│   └── graph.js            # 星图种子节点 / 边：window.KB_GRAPH = {...}
+├── vendor/                 # 第三方 JS（已本地化，离线可用）
+│   ├── three.min.js                # three.js r158
+│   └── 3d-force-graph.min.js        # 3d-force-graph 1.73.4
+├── icons/                  # PWA / 桌面图标
+│   ├── icon-192.png
+│   ├── icon-512.png
+│   ├── icon-maskable-512.png
+│   ├── icon.ico            # Windows 桌面图标
+│   └── icon.svg            # 矢量源
+├── manifest.webmanifest    # PWA 应用清单
+├── sw.js                   # Service Worker（离线缓存）
+├── electron/               # Electron 桌面打包子工程（独立可拆）
+│   ├── main.js
+│   ├── package.json
+│   └── README.md
+├── gen_icons.py            # 重新生成图标（依赖：pillow）
+├── smoke_test.js           # 冒烟测试（jsdom）
+├── star_label_test.js      # 星图标签测试（jsdom）
+└── README.md               # 本文件
 ```
 
-进度数据**不落文件**，存浏览器 `localStorage`（key 前缀 `kr_<考点id>`）。
+进度数据**不落文件**，存浏览器 `localStorage`（key 前缀 `kr_<考点id>` / `kp_<taskId>` / `kg_user`）。
 
 ---
 
@@ -222,5 +254,6 @@ subjects[]        { id, name, weight, chapters[] }
 | M3 | 资料索引：考点挂教材页码/真题年份/论文，聚合视图 + 详情面板展示 | ✅ 已交付 |
 | M4 | 计划闭环：逐周任务（默认 16 周 / 59 任务 / 覆盖 149 考点），关联考点库、可勾选看完成度 | ✅ 已交付 |
 | M6 | 知识星图：3D 力导向网状知识点，按 6 科着色、可拖拽漫游、可页内自由编辑（增/连/改/删，存本地可导出） | ✅ 已交付 |
+| 离线 & 桌面包装 | `vendor/` 本地化 3D 库 + PWA（manifest + service worker 离线缓存）+ Electron 子工程（Windows NSIS + portable） | ✅ 已交付 |
 | M5 | 拓展模块：计算精神医学 / 导师方向阅读追踪 | 待开发 |
 | M7 | 页内轻量 AI 辅导员（纯静态 RAG 路线：云端 LLM + 你自己的 key + 检索 KB_DATA 作答） | 待开发（路线已确认） |
