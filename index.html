@@ -52,6 +52,7 @@
     <button id="btn-plan" class="btn-dash" title="复习计划">🗓 计划</button>
     <button id="btn-star" class="btn-star" title="知识星图（网状知识点）">🌌 星图</button>
     <button id="btn-wrong-book" class="btn-wrong" title="错题本">📕 错题本</button>
+    <button id="btn-ai-tutor" class="btn-ai" title="AI 辅导员（需启动后端）">🤖 AI 辅导</button>
   </div>
 
   <!-- 主体三栏 -->
@@ -157,5 +158,49 @@
       }, 800);
     });
   </script>
+
+  <!-- ====== AI 辅导员面板 ====== -->
+  <div id="ai-panel" class="ai-panel">
+    <div class="ai-panel-header">
+      <span class="ai-panel-title">🤖 AI 辅导员</span>
+      <div class="ai-panel-actions">
+        <button id="btn-ai-settings" class="btn-icon" title="设置">⚙️</button>
+        <button id="btn-ai-close" class="btn-icon" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="ai-panel-body" id="ai-messages">
+      <div class="ai-msg system">
+        👋 你好！我是 306 考研 AI 辅导员。<br>
+        我可以基于你的考点库回答医学问题、讲解知识点。<br>
+        <small>提问前请确认后端已启动：<code>python server/main.py</code></small>
+      </div>
+    </div>
+    <div class="ai-panel-input">
+      <textarea id="ai-input" rows="1" placeholder="输入你的问题…" aria-label="输入问题"></textarea>
+      <button id="btn-ai-send" title="发送">▶</button>
+    </div>
+  </div>
+
+  <!-- ====== AI 设置面板 ====== -->
+  <div id="ai-settings-overlay" class="ai-settings-overlay" style="display:none">
+    <div class="ai-settings-card glass-strong">
+      <h3>⚙️ AI 辅导员设置</h3>
+      <label>后端地址</label>
+      <input id="ai-cfg-url" type="text" value="http://localhost:8765" placeholder="http://localhost:8765">
+      <label>LLM 提供商</label>
+      <select id="ai-cfg-provider">
+        <option value="deepseek">DeepSeek</option>
+        <option value="gemini">Gemini</option>
+      </select>
+      <label id="ai-cfg-key-label">DeepSeek API Key</label>
+      <input id="ai-cfg-key" type="password" placeholder="sk-xxx">
+      <p class="ai-settings-hint">配置仅存本机 localStorage，不会上传到任何服务器。</p>
+      <div class="ai-settings-btns">
+        <button id="btn-ai-save-cfg" class="btn-primary">保存</button>
+        <button id="btn-ai-cancel-cfg">取消</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

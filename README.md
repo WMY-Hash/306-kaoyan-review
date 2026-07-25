@@ -102,6 +102,13 @@ kaoyan-review/
 ├── gen_icons.py            # 重新生成图标（依赖：pillow）
 ├── smoke_test.js           # 冒烟测试（jsdom）
 ├── star_label_test.js      # 星图标签测试（jsdom）
+├── server/                 # M7 AI 辅导员后端
+│   ├── main.py             #   FastAPI 入口
+│   ├── config.py           #   配置（从 .env 读）
+│   ├── kb_index.py         #   KB_DATA → ChromaDB 向量索引
+│   ├── chat.py             #   /api/chat + /api/explain 接口
+│   ├── requirements.txt    #   Python 依赖
+│   └── .env.example        #   配置模板
 └── README.md               # 本文件
 ```
 
@@ -245,6 +252,46 @@ subjects[]        { id, name, weight, chapters[] }
 
 ---
 
+## AI 辅导员（M7）使用与架构
+
+点顶部「🤖 AI 辅导」打开侧边聊天面板。后端用 **FastAPI + ChromaDB + DeepSeek** 做向量 RAG：你的问题 → 从 149 个考点中语义检索最相关的 → 拼成 prompt 发给 DeepSeek → 流式逐字返回。
+
+### 启动后端
+
+```bash
+pip install -r server/requirements.txt    # 首次：安装依赖（含本地 embedding 模型）
+cp server/.env.example server/.env        # 首次：填入你的 DeepSeek API key
+python server/main.py                     # 启动（默认 http://localhost:8765）
+```
+
+### 功能
+
+- **自由提问**：输入任何医学问题，AI 自动从考点库检索相关知识作答（流式逐字输出）。
+- **考点讲解**：在考点详情面板点「🤖 AI 讲解」，基于该考点全文让 AI 详细讲解（概念/机制/临床联系/记忆技巧）。
+- **设置面板**：面板右上角齿轮图标 → 可配后端地址、LLM 提供商、API key。配置仅存本机 `localStorage`。
+- **完全离线**：embedding 用本地 `sentence-transformers/all-MiniLM-L6-v2`，无需联网。仅 LLM 调用需网络。
+
+### 切换 LLM
+
+| 提供商 | 配置 | embedding |
+|---|---|---|
+| **DeepSeek**（当前） | `LLM_PROVIDER=deepseek` + key | 本地模型（零费用） |
+| **Gemini**（备用） | `LLM_PROVIDER=gemini` + key | `text-embedding-004`（免费额度） |
+
+换 Gemini 只需改 `.env` 里的两行配置，后端代码零修改。
+
+### 架构
+
+```
+浏览器(前端)  ──fetch──▶  FastAPI(本机:8765)  ──DeepSeek API──▶  LLM
+                              │
+                         ChromaDB(本地向量库)
+                              │
+                    sentence-transformers(本地 embedding)
+```
+
+---
+
 ## 七、后续里程碑（计划）
 
 | 里程碑 | 内容 | 状态 |
@@ -255,5 +302,5 @@ subjects[]        { id, name, weight, chapters[] }
 | M4 | 计划闭环：逐周任务（默认 16 周 / 59 任务 / 覆盖 149 考点），关联考点库、可勾选看完成度 | ✅ 已交付 |
 | M6 | 知识星图：3D 力导向网状知识点，按 6 科着色、可拖拽漫游、可页内自由编辑（增/连/改/删，存本地可导出） | ✅ 已交付 |
 | 离线 & 桌面包装 | `vendor/` 本地化 3D 库 + PWA（manifest + service worker 离线缓存）+ Electron 子工程（Windows NSIS + portable） | ✅ 已交付 |
+| **M7** | **AI 辅导员：DeepSeek LLM + 本地 embedding + ChromaDB 向量 RAG，流式对话 + 考点讲解** | ✅ 已交付 |
 | M5 | 拓展模块：计算精神医学 / 导师方向阅读追踪 | 待开发 |
-| M7 | 页内轻量 AI 辅导员（纯静态 RAG 路线：云端 LLM + 你自己的 key + 检索 KB_DATA 作答） | 待开发（路线已确认） |

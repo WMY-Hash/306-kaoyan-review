@@ -387,6 +387,10 @@
 
     const resDiv = document.getElementById('detail-resources');
     resDiv.innerHTML = (point.resources && point.resources.length) ? buildResourcesHTML(point.resources) : '';
+
+    // M7: 暴露当前考点给 AI 讲解按钮
+    window._aiCurrentPointId = point.id;
+    window._aiCurrentPointTitle = point.title;
   }
 
   function closeDetail() {
@@ -2018,6 +2022,8 @@
   function boot() {
     try {
       init();
+      // M7: 初始化 AI 辅导员模块
+      if (typeof initAITutor === 'function') initAITutor();
     } catch (err) {
       console.error(err);
       showFatal(err);
@@ -2027,5 +2033,215 @@
     document.addEventListener('DOMContentLoaded', boot);
   } else {
     boot();
+  }
+})();
+
+/* ================================================================
+ *  M7 AI 辅导员前端模块
+ *  纯前端：fetch 后端 http://localhost:8765/api/chat (SSE 流式)
+ *  配置存 localStorage (key=kr_ai_config)
+ * ================================================================ */
+(function () {
+  'use strict';
+
+  var LS_KEY = 'kr_ai_config';
+  var aiOpen = false;
+  var aiStreaming = false;
+
+  // ---- 配置读写 ----
+  function loadCfg() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch (_) { return {}; }
+  }
+  function saveCfg(c) { localStorage.setItem(LS_KEY, JSON.stringify(c)); }
+  function apiBase() { return loadCfg().apiBase || 'http://localhost:8765'; }
+
+  // ---- DOM helpers ----
+  function el(id) { return document.getElementById(id); }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  // ---- 面板开关 ----
+  function togglePanel() {
+    aiOpen = !aiOpen;
+    el('ai-panel').classList.toggle('open', aiOpen);
+    if (aiOpen) setTimeout(function () { el('ai-input').focus(); }, 300);
+  }
+  function closePanel() { aiOpen = false; el('ai-panel').classList.remove('open'); }
+
+  // ---- 添加消息 ----
+  function addMsg(role, html) {
+    var div = document.createElement('div');
+    div.className = 'ai-msg ' + role;
+    div.innerHTML = html;
+    el('ai-messages').appendChild(div);
+    el('ai-messages').scrollTop = el('ai-messages').scrollHeight;
+    return div;
+  }
+
+  // ---- 发送消息 ----
+  async function send() {
+    var input = el('ai-input');
+    var q = input.value.trim();
+    if (!q || aiStreaming) return;
+    input.value = '';
+    el('btn-ai-send').disabled = true;
+    aiStreaming = true;
+
+    addMsg('user', escHtml(q));
+
+    var asst = addMsg('assistant', '<span class="ai-loading"></span><span class="ai-loading"></span><span class="ai-loading"></span>');
+    var full = '';
+
+    try {
+      var resp = await fetch(apiBase() + '/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: q })
+      });
+      if (!resp.ok) {
+        var errText = await resp.text();
+        asst.innerHTML = '⚠️ 请求失败: HTTP ' + resp.status + ' — ' + escHtml(errText.slice(0, 200));
+        aiStreaming = false;
+        el('btn-ai-send').disabled = false;
+        return;
+      }
+
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      while (true) {
+        var r = await reader.read();
+        if (r.done) break;
+        buf += decoder.decode(r.value, { stream: true });
+        var lines = buf.split('\n');
+        buf = lines.pop();
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i].trim();
+          if (!line.startsWith('data: ')) continue;
+          var data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            var chunk = JSON.parse(data);
+            if (chunk.error) { full = '⚠️ ' + chunk.error; break; }
+            if (chunk.content) full += chunk.content;
+          } catch (_) {}
+        }
+        asst.innerHTML = escHtml(full).replace(/\n/g, '<br>');
+        el('ai-messages').scrollTop = el('ai-messages').scrollHeight;
+      }
+      if (!full) full = '（未收到回复）';
+      asst.innerHTML = escHtml(full).replace(/\n/g, '<br>');
+    } catch (err) {
+      asst.innerHTML = '⚠️ 无法连接后端：<code>' + escHtml(err.message) + '</code><br>请确认后端已启动：<code>python server/main.py</code>';
+    }
+    aiStreaming = false;
+    el('btn-ai-send').disabled = false;
+  }
+
+  // ---- 考点讲解 ----
+  function explainPoint(pointId, title) {
+    if (!aiOpen) togglePanel();
+    addMsg('user', '🔍 请讲解：<b>' + escHtml(title) + '</b>');
+
+    var asst = addMsg('assistant', '<span class="ai-loading"></span><span class="ai-loading"></span><span class="ai-loading"></span>');
+    var full = '';
+
+    fetch(apiBase() + '/api/explain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pointId: pointId })
+    }).then(function (resp) {
+      if (!resp.ok) return resp.text().then(function (t) { throw new Error('HTTP ' + resp.status + ': ' + t.slice(0, 200)); });
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buf = '';
+      function pump() {
+        reader.read().then(function (r) {
+          if (r.done) { asst.innerHTML = escHtml(full).replace(/\n/g, '<br>') || '（未收到回复）'; return; }
+          buf += decoder.decode(r.value, { stream: true });
+          var lines = buf.split('\n');
+          buf = lines.pop();
+          for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line.startsWith('data: ')) continue;
+            var data = line.slice(6);
+            if (data === '[DONE]') continue;
+            try {
+              var chunk = JSON.parse(data);
+              if (chunk.error) { full = '⚠️ ' + chunk.error; break; }
+              if (chunk.content) full += chunk.content;
+            } catch (_) {}
+          }
+          asst.innerHTML = escHtml(full).replace(/\n/g, '<br>');
+          el('ai-messages').scrollTop = el('ai-messages').scrollHeight;
+          pump();
+        }).catch(function (err) {
+          asst.innerHTML = '⚠️ 无法连接后端：<code>' + escHtml(err.message) + '</code>';
+        });
+      }
+      pump();
+    }).catch(function (err) {
+      asst.innerHTML = '⚠️ 无法连接后端：<code>' + escHtml(err.message) + '</code>';
+    });
+  }
+
+  // ---- 设置面板 ----
+  function showSettings() {
+    var cfg = loadCfg();
+    el('ai-cfg-url').value = cfg.apiBase || 'http://localhost:8765';
+    el('ai-cfg-provider').value = cfg.provider || 'deepseek';
+    el('ai-cfg-key').value = cfg.apiKey || '';
+    el('ai-settings-overlay').style.display = 'flex';
+  }
+  function hideSettings() { el('ai-settings-overlay').style.display = 'none'; }
+  function saveSettings() {
+    saveCfg({
+      apiBase: el('ai-cfg-url').value.trim(),
+      provider: el('ai-cfg-provider').value,
+      apiKey: el('ai-cfg-key').value.trim()
+    });
+    hideSettings();
+  }
+
+  // ---- 绑定事件 ----
+  function initAITutor() {
+    el('btn-ai-tutor').addEventListener('click', togglePanel);
+    el('btn-ai-close').addEventListener('click', closePanel);
+    el('btn-ai-settings').addEventListener('click', showSettings);
+    el('btn-ai-save-cfg').addEventListener('click', saveSettings);
+    el('btn-ai-cancel-cfg').addEventListener('click', hideSettings);
+    el('btn-ai-send').addEventListener('click', send);
+    el('ai-input').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+    });
+    el('ai-settings-overlay').addEventListener('click', function (e) {
+      if (e.target === el('ai-settings-overlay')) hideSettings();
+    });
+
+    // 暴露 explainPoint 给全局
+    window._aiExplainPoint = explainPoint;
+
+    // 在 openDetail 渲染完后注入 AI 讲解按钮
+    if (typeof openDetail === 'function' && !window._aiExplainHooked) {
+      window._aiExplainHooked = true;
+      var origOpenDetail = openDetail;
+      window.openDetail = function (pointId) {
+        origOpenDetail(pointId);
+        setTimeout(function () {
+          var infoBody = document.querySelector('.info-body');
+          if (infoBody && !infoBody.querySelector('.btn-ai-explain')) {
+            var btn = document.createElement('button');
+            btn.className = 'btn-ai-explain';
+            btn.textContent = '🤖 AI 讲解';
+            btn.onclick = function () {
+              window._aiExplainPoint(
+                window._aiCurrentPointId || '',
+                window._aiCurrentPointTitle || ''
+              );
+            };
+            infoBody.appendChild(btn);
+          }
+        }, 50);
+      };
+    }
   }
 })();

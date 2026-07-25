@@ -1,0 +1,8 @@
+node_modules/
+server/chroma_data/
+server/.env
+release/
+__pycache__/
+*.pyc
+*.egg-info/
+kaoyan-review-dist.zip

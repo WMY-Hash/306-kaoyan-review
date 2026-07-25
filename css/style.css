@@ -1000,3 +1000,178 @@ a.res-item:hover { border-color: var(--accent); transform: translateY(-2px); box
   .star-hint { display: none; }
   .star-toolbar { max-width: 90%; }
 }
+
+/* ====== M7 AI 辅导员面板 ====== */
+.btn-ai {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid var(--accent2);
+  background: rgba(166,227,161,.12);
+  color: var(--accent2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background .2s, transform .15s;
+}
+.btn-ai:hover { background: rgba(166,227,161,.22); transform: translateY(-1px); }
+
+/* 侧边面板 */
+.ai-panel {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  width: 400px; max-width: 92vw;
+  background: var(--bg-crust);
+  border-left: 1px solid var(--bg-surface1);
+  display: flex; flex-direction: column;
+  z-index: 100;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(.4,0,.2,1);
+}
+.ai-panel.open { transform: translateX(0); }
+.ai-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--bg-surface0);
+  background: var(--bg-mantle);
+}
+.ai-panel-title { font-weight: 700; font-size: 15px; color: var(--accent2); }
+.ai-panel-actions { display: flex; gap: 6px; }
+.ai-panel-actions .btn-icon {
+  width: 32px; height: 32px; border-radius: 6px;
+  border: 1px solid var(--bg-surface2); background: transparent;
+  color: var(--subtext0); cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ai-panel-actions .btn-icon:hover { background: var(--bg-surface1); color: var(--text); }
+
+/* 消息列表 */
+.ai-panel-body {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column;
+  gap: 12px;
+}
+.ai-msg {
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.65;
+  word-break: break-word;
+}
+.ai-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: var(--bg-crust);
+  border-bottom-right-radius: 4px;
+}
+.ai-msg.assistant {
+  align-self: flex-start;
+  background: var(--bg-surface0);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+}
+.ai-msg.system {
+  align-self: stretch;
+  background: var(--bg-mantle);
+  color: var(--subtext0);
+  font-size: 13px;
+  border: 1px dashed var(--bg-surface2);
+}
+.ai-msg code { font-size: 12px; background: rgba(0,0,0,.3); padding: 2px 5px; border-radius: 4px; }
+.ai-msg .ai-loading { display: inline-block; width: 6px; height: 6px; background: var(--subtext0); border-radius: 50%; animation: aiPulse 1.4s infinite ease-in-out both; margin-left: 2px; }
+.ai-msg .ai-loading:nth-child(2) { animation-delay: .16s; }
+.ai-msg .ai-loading:nth-child(3) { animation-delay: .32s; }
+@keyframes aiPulse { 0%,80%,100% { opacity: 0; } 40% { opacity: 1; } }
+
+/* 输入区 */
+.ai-panel-input {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--bg-surface0);
+  background: var(--bg-mantle);
+}
+.ai-panel-input textarea {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--bg-surface2);
+  background: var(--bg-base);
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  max-height: 120px;
+  line-height: 1.45;
+}
+.ai-panel-input textarea:focus { border-color: var(--accent2); }
+#btn-ai-send {
+  width: 38px; height: 38px; border-radius: 10px;
+  border: none;
+  background: var(--accent2);
+  color: var(--bg-crust);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity .15s;
+}
+#btn-ai-send:disabled { opacity: .35; cursor: default; }
+
+/* 设置面板 */
+.ai-settings-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.65);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200;
+}
+.ai-settings-card {
+  width: 380px; max-width: 92vw;
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--bg-mantle);
+  border: 1px solid var(--bg-surface2);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ai-settings-card h3 { margin: 0 0 4px; font-size: 16px; color: var(--accent2); }
+.ai-settings-card label { font-size: 12px; color: var(--subtext0); margin-top: 4px; }
+.ai-settings-card input,
+.ai-settings-card select {
+  padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--bg-surface2);
+  background: var(--bg-base);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+.ai-settings-card input:focus,
+.ai-settings-card select:focus { border-color: var(--accent2); }
+.ai-settings-hint { font-size: 11px; color: var(--overlay2); margin: 2px 0; }
+.ai-settings-btns { display: flex; gap: 8px; margin-top: 6px; }
+.ai-settings-btns .btn-primary {
+  padding: 8px 20px; border-radius: 8px;
+  border: none; background: var(--accent2); color: var(--bg-crust);
+  font-weight: 700; cursor: pointer;
+}
+.ai-settings-btns button:last-child {
+  padding: 8px 16px; border-radius: 8px;
+  border: 1px solid var(--bg-surface2); background: transparent;
+  color: var(--subtext0); cursor: pointer;
+}
+
+/* 考点详情面板的 AI 讲解按钮 */
+.btn-ai-explain {
+  margin-top: 10px;
+  padding: 7px 15px; border-radius: 7px;
+  border: 1px solid var(--accent2);
+  background: rgba(166,227,161,.1);
+  color: var(--accent2);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: background .15s;
+}
+.btn-ai-explain:hover { background: rgba(166,227,161,.2); }
+
+@media (max-width: 500px) {
+  .ai-panel { width: 100%; max-width: 100%; }
+}
