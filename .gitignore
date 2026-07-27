@@ -1,0 +1,10 @@
+node_modules/
+__pycache__/
+*.pyc
+.env
+.env.*
+release/
+kaoyan-review-dist.zip
+*.lnk
+*~
+.DS_Store

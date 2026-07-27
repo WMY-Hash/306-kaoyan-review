@@ -30,8 +30,8 @@
   --accent2: #a6e3a1;
 
   /* 玻璃 token（更透、更暖、blur 更足、厚度感更强） */
-  --glass: rgba(255,255,255,.085);
-  --glass-strong: rgba(255,255,255,.10);
+  --glass: rgba(255,255,255,.045);
+  --glass-strong: rgba(255,255,255,.06);
   --glass-border: rgba(255,255,255,.22);
   --glass-hi: inset 0 1px 0 rgba(255,255,255,.18);
   --on-glass: rgba(232,240,236,.95);
@@ -67,41 +67,21 @@ html, body { height: 100%; }
 body {
   font-family: "Noto Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   background:
-    /* ===== 萤火虫光点（radial-gradient 圆斑，与背景同渲染引擎，100%可靠） ===== */
-    /* 左上区域 */
-    radial-gradient(circle 8px at 80px 110px, rgba(232,200,121,.60), rgba(232,200,121,.20) 4px, transparent 8px),
-    radial-gradient(circle 6px at 155px 200px, rgba(148,226,213,.50), rgba(148,226,213,.18) 3px, transparent 6px),
-    radial-gradient(circle 9px at 220px 150px, rgba(232,200,121,.48), rgba(232,200,121,.16) 5px, transparent 9px),
-    radial-gradient(circle 6px at 95px 280px, rgba(168,230,160,.46), rgba(168,230,160,.16) 3px, transparent 6px),
-    /* 中左 */
-    radial-gradient(circle 7px at 60px 420px, rgba(148,226,213,.42), rgba(148,226,213,.14) 3.5px, transparent 7px),
-    radial-gradient(circle 8px at 180px 500px, rgba(232,200,121,.52), rgba(232,200,121,.18) 4px, transparent 8px),
-    radial-gradient(circle 6px at 250px 580px, rgba(168,230,160,.40), rgba(168,230,160,.14) 3px, transparent 6px),
-    /* 右侧 */
-    radial-gradient(circle 8px at 1120px 170px, rgba(148,226,213,.50), rgba(148,226,213,.18) 4px, transparent 8px),
-    radial-gradient(circle 7px at 1060px 260px, rgba(232,200,121,.42), rgba(232,200,121,.14) 3.5px, transparent 7px),
-    radial-gradient(circle 9px at 1180px 380px, rgba(168,230,160,.46), rgba(168,230,160,.16) 5px, transparent 9px),
-    radial-gradient(circle 6px at 1090px 480px, rgba(232,200,121,.38), rgba(232,200,121,.12) 3px, transparent 6px),
-    /* 底部 */
-    radial-gradient(circle 7px at 130px calc(100vh - 180px), rgba(168,230,160,.44), rgba(168,230,160,.15) 3.5px, transparent 7px),
-    radial-gradient(circle 8px at 240px calc(100vh - 120px), rgba(232,200,121,.50), rgba(232,200,121,.17) 4px, transparent 8px),
-    /* ===== 氛围辉光区 ===== */
-    radial-gradient(ellipse 340px 260px at 6% 94%, rgba(168,230,160,.24), transparent 62%),
-    radial-gradient(ellipse 220px 170px at 10% 90%, rgba(148,226,213,.18), transparent 56%),
-    radial-gradient(ellipse 200px 150px at 94% 6%, rgba(232,200,121,.18), transparent 52%),
-    radial-gradient(ellipse 280px 200px at 3% 3%, rgba(232,200,121,.14), transparent 56%),
-    /* ===== 雾气带（森林纵深感 — 柔和、低透明） ===== */
-    radial-gradient(ellipse 900px 240px at 28% 64%, rgba(200,228,214,.055), transparent 72%),
-    radial-gradient(ellipse 1100px 260px at 72% 38%, rgba(176,206,196,.045), transparent 74%),
-    radial-gradient(ellipse 760px 200px at 50% 86%, rgba(168,230,160,.05), transparent 70%),
-    /* ===== 原有 hero 光晕（保留） ===== */
-    radial-gradient(1320px 820px at 80% -14%, rgba(232,200,121,.16), transparent 58%),
-    radial-gradient(1060px 720px at 8% 114%, rgba(148,226,213,.12), transparent 56%),
-    radial-gradient(960px 640px at 52% 48%, rgba(168,230,160,.06), transparent 60%),
-    radial-gradient(680px 480px at 16% 6%, rgba(232,200,121,.07), transparent 55%),
-    /* ===== 森林深处纵向深度：底部加深（树影剪影层在更下方） ===== */
-    radial-gradient(135% 55% at 50% 104%, rgba(0,0,0,.55), transparent 60%),
-    linear-gradient(180deg, #0e1a16 0%, #0a1311 38%, #070d0b 72%, #030605 100%);
+    /* ===== 🌙 强月光源（顶部偏右 — 穿透树冠的月光） ===== */
+    radial-gradient(ellipse 700px 500px at 82% -8%, rgba(232,200,121,.28), rgba(232,200,121,.10) 40%, transparent 70%),
+    /* ===== 🌿 冷青环境光（左侧 — 林间散射光） ===== */
+    radial-gradient(ellipse 560px 420px at 4% 18%, rgba(148,226,213,.18), rgba(148,226,213,.06) 45%, transparent 68%),
+    /* ===== 🌿 左下角绿光（植物辉光区） ===== */
+    radial-gradient(ellipse 380px 300px at 6% 94%, rgba(168,230,160,.26), transparent 60%),
+    radial-gradient(ellipse 240px 180px at 10% 90%, rgba(148,226,213,.18), transparent 55%),
+    /* ===== 🌫️ 雾气带 ===== */
+    radial-gradient(ellipse 1000px 320px at 24% 58%, rgba(200,228,214,.10), transparent 70%),
+    radial-gradient(ellipse 1200px 340px at 72% 34%, rgba(176,206,196,.08), transparent 72%),
+    radial-gradient(ellipse 900px 280px at 50% 82%, rgba(168,230,160,.09), transparent 68%),
+    /* ===== 🌲 底部林深处加深 ===== */
+    radial-gradient(140% 60% at 50% 106%, rgba(0,2,1,.65), transparent 55%),
+    /* ===== 基底：森林纵深渐变 ===== */
+    linear-gradient(175deg, #102019 0%, #0c1814 28%, #091210 56%, #050c0a 82%, #020504 100%);
   color: var(--text);
   line-height: 1.65;
   overflow: hidden;
@@ -110,28 +90,80 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* 萤火虫呼吸动画 — 用 body 本身做（background 已包含光点） */
-@keyframes firefliesGlow {
-  0% { filter: brightness(0.95); }
-  100% { filter: brightness(1.08); }
+/* ===== 萤火虫独立图层（只有光点闪，不闪全屏） ===== */
+.fireflies {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    /* 左上区 */
+    radial-gradient(circle 9px at 6% 12%, rgba(232,200,121,.68), rgba(232,200,121,.22) 4px, transparent 9px),
+    radial-gradient(circle 7px at 14% 26%, rgba(148,226,213,.60), rgba(148,226,213,.18) 3px, transparent 7px),
+    radial-gradient(circle 10px at 24% 8%, rgba(232,200,121,.58), rgba(232,200,121,.18) 5px, transparent 10px),
+    radial-gradient(circle 7px at 9% 42%, rgba(168,230,160,.60), rgba(168,230,160,.18) 3px, transparent 7px),
+    /* 中左区 */
+    radial-gradient(circle 8px at 4% 62%, rgba(148,226,213,.54), rgba(148,226,213,.16) 4px, transparent 8px),
+    radial-gradient(circle 10px at 18% 76%, rgba(232,200,121,.64), rgba(232,200,121,.20) 5px, transparent 10px),
+    radial-gradient(circle 7px at 11% 88%, rgba(168,230,160,.50), rgba(168,230,160,.14) 3px, transparent 7px),
+    /* 中央区 */
+    radial-gradient(circle 11px at 38% 22%, rgba(232,200,121,.48), rgba(232,200,121,.14) 5px, transparent 11px),
+    radial-gradient(circle 8px at 52% 44%, rgba(148,226,213,.52), rgba(148,226,213,.16) 4px, transparent 8px),
+    radial-gradient(circle 9px at 44% 68%, rgba(168,230,160,.46), rgba(168,230,160,.13) 4px, transparent 9px),
+    radial-gradient(circle 8px at 58% 18%, rgba(232,200,121,.42), rgba(232,200,121,.12) 4px, transparent 8px),
+    /* 右侧区 */
+    radial-gradient(circle 10px at 82% 28%, rgba(148,226,213,.56), rgba(148,226,213,.17) 5px, transparent 10px),
+    radial-gradient(circle 8px at 88% 52%, rgba(232,200,121,.50), rgba(232,200,121,.15) 4px, transparent 8px),
+    radial-gradient(circle 11px at 76% 72%, rgba(168,230,160,.48), rgba(168,230,160,.14) 5px, transparent 11px),
+    radial-gradient(circle 7px at 92% 84%, rgba(232,200,121,.40), rgba(232,200,121,.12) 3px, transparent 7px),
+    /* 底部区 */
+    radial-gradient(circle 9px at 22% 94%, rgba(168,230,160,.56), rgba(168,230,160,.17) 4px, transparent 9px),
+    radial-gradient(circle 10px at 64% 90%, rgba(232,200,121,.52), rgba(232,200,121,.16) 5px, transparent 10px),
+    radial-gradient(circle 8px at 86% 96%, rgba(148,226,213,.44), rgba(148,226,213,.13) 4px, transparent 8px);
+  /* 萤火虫忽闪：幅度柔和、周期长 */
+  animation: firefliesFlicker 7s ease-in-out infinite;
 }
-body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
 
-/* 删除旧的不可靠装饰层 */
-/* （body::before / body::after 已移除，萤火虫合并到 body background） */
+/* 萤火虫忽闪动画 — 仅作用于 .fireflies 图层，不影响内容 */
+@keyframes firefliesFlicker {
+  0%   { opacity: 0.60; }
+  25%  { opacity: 1.00; }
+  50%  { opacity: 0.66; }
+  75%  { opacity: 0.92; }
+  100% { opacity: 0.60; }
+}
 
-/* ===== 深邃森林剪影层（固定、置底、不拦截点击） ===== */
-/* z-index:-1 → 位于 body 背景之上、所有内容之下，树影从雾中浮出 */
+/* ===== 深邃森林 — 双层剪影方案 ===== */
+/* 底层：树影在内容之后（z-index:-1），从背景中浮出 */
 .forest-depth {
   position: fixed;
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background-image: url('assets/forest-silhouette.svg');
+  background-image: url('../assets/forest-silhouette.svg');
   background-repeat: no-repeat;
   background-position: bottom center;
   background-size: 100% auto;
-  opacity: .92;
+  opacity: 1;
+}
+/* 顶层：树荫叠加（z-index:5，在内容之上，仅底部40%，混合模式变暗） */
+/* 效果 = 像站在林边看内容，底部有树影掠过 */
+.forest-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  z-index: 5;
+  pointer-events: none;
+  background-image: url('../assets/forest-silhouette.svg');
+  background-repeat: no-repeat;
+  background-position: bottom center;
+  background-size: 100% auto;
+  opacity: .38;
+  mix-blend-mode: multiply;
+  mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0) 100%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,0.7) 45%, rgba(0,0,0,0) 100%);
 }
 
 /* ===== 顶部栏 ===== */
@@ -337,7 +369,7 @@ body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
   transition: all .22s cubic-bezier(.22,1,.36,1);
   font-size: .9rem;
   background:
-    linear-gradient(160deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.02) 100%);
+    linear-gradient(160deg, rgba(255,255,255,.042) 0%, rgba(255,255,255,.012) 100%);
   backdrop-filter: blur(12px) saturate(150%);
   -webkit-backdrop-filter: blur(12px) saturate(150%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 8px rgba(0,0,0,.18);
@@ -466,7 +498,7 @@ body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
 }
 .chapter-card {
   background:
-    linear-gradient(160deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.018) 100%);
+    linear-gradient(160deg, rgba(255,255,255,.032) 0%, rgba(255,255,255,.010) 100%);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   border: 1px solid rgba(255,255,255,.20);
@@ -511,7 +543,7 @@ body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
   gap: 12px;
   padding: 12px 16px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.05) 0%, rgba(255,255,255,.018) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.028) 0%, rgba(255,255,255,.010) 100%);
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid rgba(255,255,255,.18);
@@ -641,7 +673,7 @@ body { animation: firefliesGlow 5s ease-in-out infinite alternate; }
 }
 .detail-card-preview {
   background:
-    linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.034) 0%, rgba(255,255,255,.011) 100%);
   backdrop-filter: blur(10px) saturate(145%);
   -webkit-backdrop-filter: blur(10px) saturate(145%);
   border-radius: var(--radius);
@@ -921,7 +953,7 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; }
 .res-item {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.08) 0%, rgba(255,255,255,.03) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.045) 0%, rgba(255,255,255,.016) 100%);
   backdrop-filter: blur(16px) saturate(155%);
   -webkit-backdrop-filter: blur(16px) saturate(155%);
   border: 1px solid rgba(255,255,255,.22);
@@ -970,7 +1002,7 @@ a.res-item:hover {
 .res-row {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.025) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.040) 0%, rgba(255,255,255,.014) 100%);
   backdrop-filter: blur(14px) saturate(150%);
   -webkit-backdrop-filter: blur(14px) saturate(150%);
   border: 1px solid rgba(255,255,255,.20);
@@ -1021,7 +1053,7 @@ a.res-item:hover {
 
 .plan-week {
   background:
-    linear-gradient(180deg, rgba(255,255,255,.06) 0%, rgba(255,255,255,.02) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.034) 0%, rgba(255,255,255,.011) 100%);
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
   border: 1px solid rgba(255,255,255,.18);
@@ -1042,7 +1074,7 @@ a.res-item:hover {
 .plan-task {
   display: flex; align-items: center; gap: 12px; padding: 9px 12px; border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(255,255,255,.055) 0%, rgba(255,255,255,.02) 100%);
+    linear-gradient(180deg, rgba(255,255,255,.032) 0%, rgba(255,255,255,.011) 100%);
   border: 1px solid rgba(255,255,255,.14);
   transition: all .2s cubic-bezier(.22,1,.36,1);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
@@ -1292,7 +1324,7 @@ a.res-item:hover {
 
 /* 顶部栏：玻璃横条 + 底部细光边 */
 #top-bar {
-  background: rgba(12,19,17,.72);
+  background: rgba(12,19,17,.55);
   backdrop-filter: blur(18px) saturate(150%);
   -webkit-backdrop-filter: blur(18px) saturate(150%);
   border-bottom: 1px solid var(--glass-border);
@@ -1336,7 +1368,7 @@ a.res-item:hover {
 
 /* 左侧科目导航：玻璃侧栏 — 高度通透（设计稿对齐） */
 #sidebar {
-  background: rgba(12,19,17,.28);
+  background: rgba(12,19,17,.18);
   backdrop-filter: blur(28px) saturate(170%);
   -webkit-backdrop-filter: blur(28px) saturate(170%);
   border-right: 1px solid rgba(255,255,255,.10);
@@ -1345,7 +1377,7 @@ a.res-item:hover {
 
 /* 详情面板：玻璃浮层 — 更通透（设计稿对齐） */
 #detail-panel {
-  background: rgba(15,24,22,.70);
+  background: rgba(15,24,22,.52);
   backdrop-filter: blur(24px) saturate(165%);
   -webkit-backdrop-filter: blur(24px) saturate(165%);
   border-left: 1px solid var(--glass-border);

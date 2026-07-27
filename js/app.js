@@ -22,6 +22,11 @@
   let starHighlight = new Set();   // 搜索高亮的节点 id
   let starClickReveal = true;      // 点击连线时，在该线上显示关系说明
   let starClickedLinkId = null;    // 当前被点击、需要显示说明的连线 id
+  let starFlowerTextures = null;   // { groupId: THREE.CanvasTexture } 6 科花纹理
+  let starFlowerSprites = [];      // 所有花 sprite 引用，用于脉动动画
+  let starVineData = {};           // { linkId: { group, tube, leaves, animStart } } 藤蔓对象
+  let starPulseRaf = null;         // 脉冲动画 requestAnimationFrame id
+  let starVineRaf = null;          // 藤蔓蔓延动画 requestAnimationFrame id
   let reviewSource = 'point'; // 'point' | 'wrong' | 'queue'
 
   // ===== 致命错误可视化（避免静默白屏）=====
@@ -1400,22 +1405,341 @@
     };
   }
 
-  // 节点着色：搜索高亮时，命中亮、其余暗
-  function starNodeColor(n) {
-    if (starHighlight.size && !starHighlight.has(n.id)) return '#3a3f4b';
-    return GROUP_COLORS[n.group] || '#89b4fa';
+  // ── 花纹理加载（运行时生成 CanvasTexture，离线可用）──
+  // 6 科 → 6 个花色（辉光色用于 glow sprite）
+  const STAR_FLOWER_GLOW = {
+    physio:   '#c8dff0', // 冰蓝辉光
+    biochem:  '#a0e0d0', // 冷翠辉光
+    pathol:   '#f0c0d8', // 粉暖辉光
+    internal: '#e8d4a0', // 暖金辉光
+    surgery:  '#b8e8f0', // 青冷辉光
+    humanity: '#dcc8f0'  // 柔紫辉光
+  };
+  const STAR_FLOWER_FILE = {
+    physio:   'assets/flowers/hk_white_peony.png',
+    biochem:  'assets/flowers/hk_larkspur.png',
+    pathol:   'assets/flowers/hk_camellia.png',
+    internal: 'assets/flowers/hk_black_peony.png',
+    surgery:  'assets/flowers/hk_chrysanthemum.png',
+    humanity: 'assets/flowers/hk_wisteria.png'
+  };
+  // 细藤基础色
+  const VINE_THIN = 'rgba(60,90,70,.55)';
+  const VINE_THICK = '#3a5a40';
+  const VINE_HIGHLIGHT = 'rgba(249,226,175,.95)';
+
+  // ── 花纹理加载：双轨制（PNG + canvas fallback）──
+  // PNG 可能因 file:// CORS 失败；canvas fallback 一定能成
+  function loadStarTextures() {
+    if (starFlowerTextures) return Promise.resolve(starFlowerTextures);
+    starFlowerTextures = {};
+    const loader = new THREE.TextureLoader();
+    GROUP_IDS.forEach(g => {
+      // 立即生成 canvas fallback（保证一定有纹理）
+      starFlowerTextures[g] = genFallbackFlowerTex(g);
+      // 同时尝试加载 PNG（成功则替换）
+      loader.load(STAR_FLOWER_FILE[g], tex => {
+        tex.premultiplyAlpha = false;
+        tex.needsUpdate = true;
+        starFlowerTextures[g] = tex;
+        // 更新现有 sprite 的材质
+    starFlowerSprites.forEach(sg => {
+      if (sg.userData.group === g) {
+        const s = sg.userData.sprite;
+        if (s && s.material) {
+          s.material.map = tex;
+          s.material.needsUpdate = true;
+        }
+      }
+    });
+      }, undefined, () => {
+        // 加载失败，保留 fallback（无操作）
+        console.log('[星图] 花纹理 PNG 加载失败，使用 canvas 回退: ' + g);
+      });
+    });
+    return Promise.resolve(starFlowerTextures);
   }
-  function starLinkColor(l) {
-    const s = (typeof l.source === 'object' ? l.source.id : l.source);
-    const t = (typeof l.target === 'object' ? l.target.id : l.target);
-    // 当前选中的连线：暖黄高亮，便于看清
-    if (starClickedLinkId && l.id === starClickedLinkId) return 'rgba(249,226,175,.95)';
-    if (starHighlight.size) {
-      if (starHighlight.has(s) && starHighlight.has(t)) return 'rgba(166,227,161,.95)';
-      return 'rgba(120,126,140,.3)';
+  // Canvas 绘制花朵纹理（辉光 + 5瓣花 + 中心 + 高光）
+  function genFallbackFlowerTex(g) {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    const color = GROUP_COLORS[g] || '#89b4fa';
+    const glowColor = STAR_FLOWER_GLOW[g] || color;
+    const r = parseInt(color.slice(1, 3), 16), gg = parseInt(color.slice(3, 5), 16), b = parseInt(color.slice(5, 7), 16);
+
+    // 1. 外层柔光（径向渐变，从亮到透明）
+    const grad = ctx.createRadialGradient(128, 128, 20, 128, 128, 124);
+    grad.addColorStop(0, `rgba(${r},${gg},${b},0.6)`);
+    grad.addColorStop(0.5, `rgba(${r},${gg},${b},0.18)`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 256, 256);
+
+    // 2. 花瓣 (5瓣)
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+      const cx = 128 + Math.cos(angle) * 50;
+      const cy = 128 + Math.sin(angle) * 50;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle + Math.PI / 2);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 32, 50, 0, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      // 花瓣高光
+      ctx.beginPath();
+      ctx.ellipse(-8, -16, 8, 22, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,0.35)`;
+      ctx.fill();
+      // 花瓣阴影
+      ctx.beginPath();
+      ctx.ellipse(8, 16, 8, 22, 0, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(0,0,0,0.18)`;
+      ctx.fill();
+      ctx.restore();
     }
-    // 基础连线：加粗提亮，未点击时也清晰可见
-    return 'rgba(137,180,250,.9)';
+    // 3. 中心花心
+    ctx.beginPath();
+    ctx.arc(128, 128, 22, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(128, 128, 16, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff5d8';
+    ctx.fill();
+    // 4. 高光
+    ctx.beginPath();
+    ctx.arc(122, 120, 5, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fill();
+
+    const tex = new THREE.CanvasTexture(c);
+    tex.premultiplyAlpha = false;
+    tex.needsUpdate = true;
+    tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }
+  function legacyGenFallbackTex_unused(g) {
+    const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+    const ctx = c.getContext('2d');
+    const color = GROUP_COLORS[g] || '#89b4fa';
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(64, 64, 50, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.4)';
+    ctx.beginPath(); ctx.arc(56, 52, 12, 0, Math.PI * 2); ctx.fill();
+    const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }
+
+  // ── 节点：花 Sprite + 辉光 Sprite ──
+  function starNodeThreeObject(n) {
+    const tex = (starFlowerTextures && starFlowerTextures[n.group]) || null;
+    const group = new THREE.Group();
+
+    // 仅一个 sprite：带辉光的整朵花（辉光已画进纹理/canvas 内）
+    const mat = new THREE.SpriteMaterial({
+      map: tex, depthTest: true, depthWrite: false,
+      opacity: 1, transparent: true,
+      blending: THREE.NormalBlending
+    });
+    const sprite = new THREE.Sprite(mat);
+    sprite.scale.set(28, 28, 1);  // 大尺寸确保可见
+    sprite.center.set(0.5, 0.5);
+    sprite.renderOrder = 10;
+    group.add(sprite);
+
+    group.userData = { sprite: sprite, mat: mat, group: n.group, nodeId: n.id };
+    starFlowerSprites.push(group);
+    return group;
+  }
+  function genGlowTex(hex) {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createRadialGradient(32, 32, 8, 32, 32, 32);
+    grad.addColorStop(0, hex); grad.addColorStop(0.4, hex + '88'); grad.addColorStop(1, 'transparent');
+    ctx.fillStyle = grad; ctx.fillRect(0, 0, 64, 64);
+    const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+    return tex;
+  }
+
+  // 搜索高亮时更新所有花的透明度
+  function updateStarNodeHighlight() {
+    if (!starGraph) return;
+    starFlowerSprites.forEach(group => {
+      const dimmed = starHighlight.size && !starHighlight.has(group.userData.nodeId);
+      const s = group.userData.sprite;
+      if (s && s.material) s.material.opacity = dimmed ? 0.18 : 1;
+    });
+  }
+
+  // ── 连线：默认细藤 + 点击时蔓延成粗藤 ──
+  function genVineMat(thin) {
+    return new THREE.MeshBasicMaterial({
+      color: thin ? new THREE.Color(VINE_THIN) : new THREE.Color(VINE_THICK),
+      transparent: true, opacity: thin ? 0.6 : 0.92, depthWrite: false
+    });
+  }
+  const _yAxis = new THREE.Vector3(0, 1, 0);
+  const _dirTmp = new THREE.Vector3();
+  function starLinkThreeObject(l) {
+    const group = new THREE.Group();
+    // 细管本地位置 y=0（圆柱沿 Y 轴），整个 group 由 starLinkPositionUpdate 朝向
+    const mat = genVineMat(true);
+    const geom = new THREE.CylinderGeometry(0.15, 0.15, 1, 6);
+    // 把圆柱移到 y=0.5，让它的中心在 group 原点上方 0.5（这样 scale.y=len 后正好跨 0..len）
+    geom.translate(0, 0.5, 0);
+    const mesh = new THREE.Mesh(geom, mat);
+    group.add(mesh);
+    group.userData = { mesh: mesh, mat: mat, linkId: l.id, isThick: false, tubeMesh: null };
+    starVineData[l.id] = group;
+    return group;
+  }
+  function starLinkPositionUpdate(obj, coords) {
+    const { start, end } = coords;
+    const sx = start.x, sy = start.y, sz = start.z;
+    const ex = end.x, ey = end.y, ez = end.z;
+    const dx = ex - sx, dy = ey - sy, dz = ez - sz;
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+    // 整个 group 位于连线起点（因为圆柱沿 +Y 方向、长度从 0 到 len）
+    obj.position.set(sx, sy, sz);
+    // group 的 +Y 对齐到连线方向
+    _dirTmp.set(dx, dy, dz).divideScalar(len);
+    obj.quaternion.setFromUnitVectors(_yAxis, _dirTmp);
+    // 细管长度（局部坐标）
+    obj.userData.mesh.scale.y = len;
+    // 粗藤若已生成，也要跟着节点位置移动（重建几何）
+    const ud = obj.userData;
+    if (ud.tubeMesh && ud.tubeMat && starGraph) {
+      const ns = new THREE.Vector3(sx, sy, sz);
+      const ne = new THREE.Vector3(ex, ey, ez);
+      const mid = new THREE.Vector3(
+        ns.x + dx * 0.5 + (Math.random() - 0.5) * 2.5,
+        ns.y + dy * 0.5 + 1.5,
+        ns.z + dz * 0.5 + (Math.random() - 0.5) * 2.5
+      );
+      const curve = new THREE.QuadraticBezierCurve3(ns, mid, ne);
+      // 用更少的段以保持动画流畅
+      const newGeom = new THREE.TubeGeometry(curve, 60, 0.55, 8, false);
+      const progress = ud.animStart ? Math.min((performance.now() - ud.animStart) / ud.animDuration, 1) : 1;
+      newGeom.setDrawRange(0, Math.floor(progress * (newGeom.index ? newGeom.index.count : newGeom.attributes.position.count)));
+      ud.tubeMesh.geometry.dispose();
+      ud.tubeMesh.geometry = newGeom;
+      ud.tubeGeom = newGeom;
+    }
+  }
+  // 蔓延生长动画：从源到目标，缠绕动画
+  function startVineGrow(linkId) {
+    if (!starGraph) return;
+    const data = starGraph.graphData();
+    const link = data.links.find(l => l.id === linkId);
+    if (!link) return;
+    const group = starVineData[linkId];
+    if (!group) return;
+    // 重置之前可能存在的粗藤
+    if (group.userData.isThick) {
+      // 已经在动画或已粗化，重置
+      if (group.userData.tubeMesh && group.userData.tubeMesh.parent) {
+        group.userData.tubeMesh.parent.remove(group.userData.tubeMesh);
+      }
+      if (group.userData.tubeGeom) group.userData.tubeGeom.dispose();
+      if (group.userData.tubeMat) group.userData.tubeMat.dispose();
+      group.userData.tubeMesh = null; group.userData.tubeGeom = null; group.userData.tubeMat = null;
+    }
+    group.userData.isThick = true;
+    const s = link.source, t = link.target;
+    if (typeof s !== 'object' || typeof t !== 'object' || s.x === undefined || t.x === undefined) return;
+    const start = new THREE.Vector3(s.x, s.y, s.z);
+    const end = new THREE.Vector3(t.x, t.y, t.z);
+    // 弧线中点偏移（垂直于连线方向轻微抬高，制造藤蔓弯曲感）
+    const dx = end.x - start.x, dy = end.y - start.y, dz = end.z - start.z;
+    const len = Math.sqrt(dx*dx + dy*dy + dz*dz) || 1;
+    const mid = new THREE.Vector3(
+      start.x + dx * 0.5 + (Math.random() - 0.5) * 3,
+      start.y + dy * 0.5 + 2,
+      start.z + dz * 0.5 + (Math.random() - 0.5) * 3
+    );
+    const curve = new THREE.QuadraticBezierCurve3(start, mid, end);
+    const tubeGeom = new THREE.TubeGeometry(curve, 60, 0.55, 8, false);
+    tubeGeom.setDrawRange(0, 0);
+    const tubeMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(VINE_THICK), transparent: true, opacity: 0.94, depthWrite: false });
+    const tubeMesh = new THREE.Mesh(tubeGeom, tubeMat);
+    // 直接挂到 starGraph 的场景根节点，避免 link group 朝向影响
+    const scene = starGraph.scene();
+    scene.add(tubeMesh);
+    group.userData.tubeMesh = tubeMesh;
+    group.userData.tubeGeom = tubeGeom;
+    group.userData.tubeMat = tubeMat;
+    group.userData.tubeLen = len;
+    group.userData.animStart = performance.now();
+    group.userData.animDuration = 1500; // ms
+    group.userData.mesh.visible = false; // 隐藏细管
+    if (!starVineRaf) starVineRaf = requestAnimationFrame(animateVines);
+  }
+  function animateVines(now) {
+    let active = false;
+    Object.values(starVineData).forEach(group => {
+      if (!group.userData.animStart || !group.userData.tubeGeom) return;
+      const elapsed = now - group.userData.animStart;
+      const dur = group.userData.animDuration;
+      const progress = Math.min(elapsed / dur, 1);
+      // TubeGeometry 默认是 indexed，先用 index.count；万一是 non-indexed 用 position.count
+      const total = group.userData.tubeGeom.index ? group.userData.tubeGeom.index.count : group.userData.tubeGeom.attributes.position.count;
+      group.userData.tubeGeom.setDrawRange(0, Math.floor(progress * total));
+      if (progress >= 1) {
+        group.userData.animStart = null;
+        group.userData.tubeMat.color.set(VINE_HIGHLIGHT);
+      }
+      if (progress < 1) active = true;
+    });
+    if (active) starVineRaf = requestAnimationFrame(animateVines);
+    else starVineRaf = null;
+  }
+  function resetVine(linkId) {
+    const group = starVineData[linkId];
+    if (!group) return;
+    if (group.userData.tubeMesh) {
+      if (group.userData.tubeMesh.parent) group.userData.tubeMesh.parent.remove(group.userData.tubeMesh);
+      if (group.userData.tubeGeom) group.userData.tubeGeom.dispose();
+      if (group.userData.tubeMat) group.userData.tubeMat.dispose();
+      group.userData.tubeMesh = null; group.userData.tubeGeom = null; group.userData.tubeMat = null;
+    }
+    group.userData.isThick = false;
+    group.userData.animStart = null;
+    group.userData.mesh.visible = true;
+    group.userData.mat.color.set(VINE_THIN);
+    group.userData.mat.opacity = 0.6;
+  }
+  function resetAllVines() {
+    Object.keys(starVineData).forEach(id => resetVine(id));
+  }
+
+  // ── 花朵整体脉冲动画（辉光已画进纹理，对 sprite 做明暗呼吸）──
+  function startPulseAnim() {
+    if (starPulseRaf) cancelAnimationFrame(starPulseRaf);
+    const startTime = performance.now();
+    function pulse(now) {
+      if (!isStarMode || !starGraph) { starPulseRaf = null; return; }
+      const t = (now - startTime) * 0.001;
+      starFlowerSprites.forEach((group, idx) => {
+        const s = group.userData.sprite;
+        if (!s) return;
+        // 2.5s 周期，呼吸
+        const phase = (t + idx * 0.45) % 2.5;
+        const val = 0.5 + 0.5 * Math.sin(phase * Math.PI * 2 / 2.5);
+        // 尺寸微脉动 + 透明度
+        const baseSize = 28;
+        const sc = baseSize + val * 4;
+        s.scale.set(sc, sc, 1);
+        s.material.opacity = 0.85 + val * 0.15;
+      });
+      starPulseRaf = requestAnimationFrame(pulse);
+    }
+    starPulseRaf = requestAnimationFrame(pulse);
+  }
+  function stopPulseAnim() {
+    if (starPulseRaf) { cancelAnimationFrame(starPulseRaf); starPulseRaf = null; }
+    if (starVineRaf) { cancelAnimationFrame(starVineRaf); starVineRaf = null; }
   }
 
   function toggleStarGraph() {
@@ -1482,7 +1806,7 @@
     bindStarResize();
 
     const raw = getRawGraph();
-    // 先探测 WebGL 是否可用；不可用则直接走可编辑列表降级，避免 3D 初始化抛错把界面冲掉
+    // WebGL 探测
     const webglOk = (function () {
       try {
         const c = document.createElement('canvas');
@@ -1490,45 +1814,65 @@
       } catch (e) { return false; }
     })();
     if (typeof window.ForceGraph3D === 'function' && webglOk) {
-      try {
-        const mount = document.getElementById('star-graph');
-        const w = area.clientWidth || window.innerWidth;
-        const h = area.clientHeight || window.innerHeight;
-        starGraph = window.ForceGraph3D()(mount)
-          .width(w).height(h)
-          .backgroundColor('#0d1117')
-          .graphData(cloneGraph(raw))
-          .nodeId('id')
-          .nodeVal(n => 2 + (n.deg || 0) * 0.6)
-          .nodeColor(starNodeColor)
-          .nodeOpacity(0.95)
-          .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
-          .nodeThreeObjectExtend(false)
-          .linkColor(starLinkColor)
-          .linkWidth(1.2)
-          .linkOpacity(0.9)
-          .linkDirectionalArrowLength(2.2)
-          .linkDirectionalArrowRelPos(1)
-          .linkDirectionalArrowColor(starLinkColor)
-          .linkLabel(l => {
-            const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
-            return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
-          })
-        .onNodeClick(n => { starHighlight.clear(); starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) { starGraph.nodeColor(starGraph.nodeColor()); starGraph.linkColor(starGraph.linkColor()); } showNodeInfo(n.id); focusNode(n); })
-        .onLinkClick(l => { starClickedLinkId = l.id; applyLinkLabelVisibility(); if (starGraph) starGraph.linkColor(starGraph.linkColor()); showLinkInfo(l); })
-        .onBackgroundClick(() => { starClickedLinkId = null; applyLinkLabelVisibility(); if (starGraph) starGraph.linkColor(starGraph.linkColor()); });
-        applyLinkLabelVisibility(); // 初始全部隐藏，仅点击的连线才显示
-        // 引擎稳定后自动适配视角
-        starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
-        // 选中连线的关系说明改用 HTML 浮层（矢量文字，清晰不糊），不再用 3D 文字纹理
-        // 标签位置每帧由 graph2ScreenCoords 把连线中点投影到屏幕坐标，见 applyLinkLabelVisibility()
-      } catch (e) {
-        console.warn('3D 渲染初始化失败，降级为列表视图：', e);
-        starGraph = null;
-        renderStarFallback(raw);
-      }
+      // 异步：先加载纹理，再创建图（避免花 Texture 缺失导致 sprite 是白点）
+      loadStarTextures().then(() => initStarThreeD(raw)).catch(err => {
+        console.warn('纹理加载失败，仍尝试初始化：', err);
+        initStarThreeD(raw);
+      });
     } else {
-      // CDN 未加载（离线/被拦截）：降级为可编辑的列表视图
+      renderStarFallback(raw);
+    }
+  }
+  function initStarThreeD(raw) {
+    starFlowerSprites = [];
+    starVineData = {};
+    try {
+      const mount = document.getElementById('star-graph');
+      const area = document.getElementById('content-area');
+      const w = (mount && mount.clientWidth) || (area && area.clientWidth) || window.innerWidth;
+      const h = (mount && mount.clientHeight) || (area && area.clientHeight) || window.innerHeight;
+      starGraph = window.ForceGraph3D()(mount)
+        .width(w).height(h)
+        .backgroundColor('#0d1117')
+        .graphData(cloneGraph(raw))
+        .nodeId('id')
+        .nodeVal(n => 2 + (n.deg || 0) * 0.6)
+        .nodeThreeObject(starNodeThreeObject)
+        .nodeOpacity(1)
+        .nodeLabel(n => `<div style="padding:4px 8px"><b>${escapeHtml(n.name)}</b><br><span style="color:#9aa0ac;font-size:11px">${GROUP_NAMES[n.group] || n.group}</span></div>`)
+        .nodeThreeObjectExtend(false)
+        .linkThreeObject(starLinkThreeObject)
+        .linkPositionUpdate(starLinkPositionUpdate)
+        .linkWidth(0.6)
+        .linkOpacity(0)
+        .linkLabel(l => {
+          const s = nodeNameOf(raw, l.source), t = nodeNameOf(raw, l.target);
+          return `<div style="padding:3px 7px">${escapeHtml(s)} → ${escapeHtml(t)}<br><span style="color:#9aa0ac;font-size:11px">${escapeHtml(l.type || '')}${l.label ? ' · ' + escapeHtml(l.label) : ''}</span></div>`;
+        })
+      .onNodeClick(n => {
+        starHighlight.clear(); starClickedLinkId = null;
+        resetAllVines(); applyLinkLabelVisibility();
+        updateStarNodeHighlight();
+        showNodeInfo(n.id); focusNode(n);
+      })
+      .onLinkClick(l => {
+        resetAllVines();
+        starClickedLinkId = l.id;
+        if (starClickedLinkId) startVineGrow(starClickedLinkId);
+        applyLinkLabelVisibility();
+        showLinkInfo(l);
+      })
+      .onBackgroundClick(() => {
+        starClickedLinkId = null;
+        resetAllVines();
+        applyLinkLabelVisibility();
+      });
+      applyLinkLabelVisibility();
+      startPulseAnim();
+      starGraph.onEngineStop(() => { try { starGraph.zoomToFit(500, 50); } catch (e) {} });
+    } catch (e) {
+      console.warn('3D 渲染初始化失败，降级为列表视图：', e);
+      starGraph = null;
       renderStarFallback(raw);
     }
   }
@@ -1607,13 +1951,13 @@
   // —— 搜索：在星图中高亮并飞向命中节点 ——
   function starSearch(q) {
     starHighlight.clear();
-    if (!q) { if (starGraph) starGraph.nodeColor(starGraph.nodeColor()); hideStarInfo(); return; }
+    if (!q) { updateStarNodeHighlight(); hideStarInfo(); return; }
     const raw = getRawGraph();
     const hits = raw.nodes.filter(n =>
       (n.name + ' ' + (n.tags || []).join(' ') + ' ' + (n.body || '')).toLowerCase().includes(q));
     hits.forEach(n => starHighlight.add(n.id));
     if (starGraph) {
-      starGraph.nodeColor(starGraph.nodeColor());
+      updateStarNodeHighlight();
       const gn = starGraph.graphData().nodes.find(x => x.id === (hits[0] && hits[0].id));
       focusNode(gn);
     }
@@ -1918,6 +2262,8 @@
   function refreshStar() {
     const raw = getRawGraph();
     if (starGraph) {
+      starFlowerSprites = [];
+      starVineData = {};
       starGraph.graphData(cloneGraph(raw));
     } else {
       renderStarFallback(raw);
@@ -1993,6 +2339,10 @@
   function exitStar() {
     isStarMode = false;
     starHighlight.clear();
+    stopPulseAnim();
+    starFlowerSprites = [];
+    starVineData = {};
+    starFlowerTextures = null;
     const b = document.getElementById('btn-star');
     if (b) b.classList.remove('active');
     document.getElementById('app-container').classList.remove('star-active');
